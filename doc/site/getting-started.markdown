@@ -32,6 +32,7 @@ In here you'll find ready to go projects for `Visual Studio`, `XCode` and tools 
  * **Windows** Open `wren.sln` inside `projects/vs2019/` (or `vs2017`), hit build.
  * **Mac** Open `wren.xcworkspace` inside `projects/xcode/`, hit build.
  * **Linux** Run `make` inside of `projects/make/`.
+ * **Cross-platform** Run `meson build` inside of the root of the project, then run `ninja` in `build/`
 
 In each case, **there will be library files generated into the root `lib/` folder**.   
 These are what you'll link into your project, based on your needs.
@@ -54,6 +55,13 @@ in your project for a portable experience.
 **all source files**   
 The alternative to building via the provided projects is to include the wren source code in your project.
 Since it has no dependencies this is simple, all the code in `src/` comes along. There's a readme in `src/` for details.
+
+If you use Meson as your build system, you can include the Wren source tree in your `subprojects` directory.
+Then, you can get a dependency object with the following line in your `meson.build`:
+
+```
+libwren_dep = dependency('wren', fallback : ['wren', 'libwren_dep'])
+```
 
 **'amalgamated' build**   
 If you want an even simpler way, there's an 'amalgamated' build (often called `blob`, or `unity` builds.).
