@@ -12,6 +12,9 @@
 #if WREN_OPT_META
   #include "wren_opt_meta.h"
 #endif
+#if WREN_OPT_MIRROR
+  #include "wren_opt_mirror.h"
+#endif
 #if WREN_OPT_RANDOM
   #include "wren_opt_random.h"
 #endif
@@ -325,6 +328,12 @@ static WrenForeignMethodFn findForeignMethod(WrenVM* vm,
     if (strcmp(moduleName, "meta") == 0)
     {
       method = wrenMetaBindForeignMethod(vm, className, isStatic, signature);
+    }
+#endif
+#if WREN_OPT_MIRROR
+    if (strcmp(moduleName, "mirror") == 0)
+    {
+      method = wrenMirrorBindForeignMethod(vm, className, isStatic, signature);
     }
 #endif
 #if WREN_OPT_RANDOM
@@ -749,6 +758,9 @@ static Value importModule(WrenVM* vm, Value name)
     ObjString* nameString = AS_STRING(name);
 #if WREN_OPT_META
     if (strcmp(nameString->value, "meta") == 0) result.source = wrenMetaSource();
+#endif
+#if WREN_OPT_MIRROR
+    if (strcmp(nameString->value, "mirror") == 0) result.source = wrenMirrorSource();
 #endif
 #if WREN_OPT_RANDOM
     if (strcmp(nameString->value, "random") == 0) result.source = wrenRandomSource();

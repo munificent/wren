@@ -51,6 +51,10 @@
   #define WREN_OPT_META 1
 #endif
 
+#ifndef WREN_OPT_MIRROR
+  #define WREN_OPT_MIRROR 1
+#endif
+
 #ifndef WREN_OPT_RANDOM
   #define WREN_OPT_RANDOM 1
 #endif
