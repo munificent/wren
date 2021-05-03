@@ -633,6 +633,18 @@ ObjClass* wrenNewClass(WrenVM* vm, ObjClass* superclass, int numFields,
 
 void wrenBindMethod(WrenVM* vm, ObjClass* classObj, int symbol, Method method);
 
+static inline Method *wrenClassGetMethod(WrenVM* vm, const ObjClass* classObj,
+                                         int symbol)
+{
+  Method* method;
+  if (symbol >= 0 && symbol < classObj->methods.count &&
+      (method = &classObj->methods.data[symbol])->type != METHOD_NONE)
+  {
+    return method;
+  }
+  return NULL;
+}
+
 // Creates a new closure object that invokes [fn]. Allocates room for its
 // upvalues, but assumes outside code will populate it.
 ObjClosure* wrenNewClosure(WrenVM* vm, ObjFn* fn);

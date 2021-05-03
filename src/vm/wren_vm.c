@@ -664,8 +664,8 @@ static void createForeign(WrenVM* vm, ObjFiber* fiber, Value* stack)
   int symbol = wrenSymbolTableFind(&vm->methodNames, "<allocate>", 10);
   ASSERT(symbol != -1, "Should have defined <allocate> symbol.");
 
-  ASSERT(classObj->methods.count > symbol, "Class should have allocator.");
-  Method* method = &classObj->methods.data[symbol];
+  Method* method = wrenClassGetMethod(vm, classObj, symbol);
+  ASSERT(method != NULL, "Class should have allocator.");
   ASSERT(method->type == METHOD_FOREIGN, "Allocator should be foreign.");
 
   // Pass the constructor arguments to the allocator as well.
@@ -688,10 +688,8 @@ void wrenFinalizeForeign(WrenVM* vm, ObjForeign* foreign)
 
   // If the class doesn't have a finalizer, bail out.
   ObjClass* classObj = foreign->obj.classObj;
-  if (symbol >= classObj->methods.count) return;
-
-  Method* method = &classObj->methods.data[symbol];
-  if (method->type == METHOD_NONE) return;
+  Method* method = wrenClassGetMethod(vm, classObj, symbol);
+  if (method == NULL) return;
 
   ASSERT(method->type == METHOD_FOREIGN, "Finalizer should be foreign.");
 
@@ -1035,8 +1033,8 @@ static WrenInterpretResult runInterpreter(WrenVM* vm, register ObjFiber* fiber)
 
     completeCall:
       // If the class's method table doesn't include the symbol, bail.
-      if (symbol >= classObj->methods.count ||
-          (method = &classObj->methods.data[symbol])->type == METHOD_NONE)
+      method = wrenClassGetMethod(vm, classObj, symbol);
+      if (method == NULL)
       {
         methodNotFound(vm, classObj, symbol);
         RUNTIME_ERROR();
