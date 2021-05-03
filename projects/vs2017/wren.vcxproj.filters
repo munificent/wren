@@ -18,6 +18,9 @@
     <ClInclude Include="..\..\src\optional\wren_opt_meta.h">
       <Filter>optional</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\optional\wren_opt_mirror.h">
+      <Filter>optional</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\src\optional\wren_opt_random.h">
       <Filter>optional</Filter>
     </ClInclude>
@@ -31,6 +34,9 @@
       <Filter>vm</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\vm\wren_debug.h">
+      <Filter>vm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\vm\wren_math.h">
       <Filter>vm</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\vm\wren_opcodes.h">
@@ -51,6 +57,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\optional\wren_opt_meta.c">
+      <Filter>optional</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\optional\wren_opt_mirror.c">
       <Filter>optional</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\optional\wren_opt_random.c">
