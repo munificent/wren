@@ -39,6 +39,20 @@ static ObjModule* mirrorGetSlotModule(WrenVM* vm, int slot)
   return AS_MODULE(moduleVal);
 }
 
+static void mirrorClassMirrorAllAttributes(WrenVM* vm)
+{
+  ObjClass* classObj = mirrorGetSlotClass(vm, 1);
+
+  if (classObj != NULL)
+  {
+    *wrenSlotAtUnsafe(vm, 0) = classObj->attributes;
+  }
+  else
+  {
+    wrenSetSlotNull(vm, 0);
+  }
+}
+
 static void mirrorClassMirrorHasMethod(WrenVM* vm)
 {
   ObjClass* classObj = mirrorGetSlotClass(vm, 1);
@@ -238,6 +252,12 @@ WrenForeignMethodFn wrenMirrorBindForeignMethod(WrenVM* vm,
 {
   if (strcmp(className, "ClassMirror") == 0)
   {
+    if (isStatic &&
+        strcmp(signature, "allAttributes(_)") == 0)
+    {
+      return mirrorClassMirrorAllAttributes;
+    }
+
     if (isStatic &&
         strcmp(signature, "hasMethod(_,_)") == 0)
     {

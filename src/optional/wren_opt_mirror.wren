@@ -31,6 +31,7 @@ class ObjectMirror is Mirror {
 }
 
 class ClassMirror is ObjectMirror {
+  foreign static allAttributes(reflectee)
   foreign static hasMethod(reflectee, signature)
   foreign static methodNames(reflectee)
 
@@ -42,6 +43,11 @@ class ClassMirror is ObjectMirror {
   }
 
   moduleMirror { _moduleMirror }
+
+  attributes {
+    var attr = ClassMirror.allAttributes(reflectee)
+    return attr != null ? attr.self : null
+  }
 
   hasMethod(signature) { ClassMirror.hasMethod(reflectee, signature) }
 
@@ -85,6 +91,12 @@ class MethodMirror is Mirror {
 //  maxSlots { MethodMirror.maxSlots_(_method) }
 //  numUpvalues { MethodMirror.maxSlots_(_numUpvalues) }
   signature { MethodMirror.signature_(_method) }
+
+  attributes {
+    var attr = ClassMirror.allAttributes(_class)
+    var methods = attr != null ? attr.methods : null
+    return methods != null ? methods[signature] : null
+  }
 }
 
 class ModuleMirror is Mirror {
