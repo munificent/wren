@@ -2892,6 +2892,7 @@ static int getByteCountForArguments(const uint8_t* bytecode,
     case CODE_FALSE:
     case CODE_TRUE:
     case CODE_POP:
+    case CODE_DUP:
     case CODE_CLOSE_UPVALUE:
     case CODE_RETURN:
     case CODE_END:

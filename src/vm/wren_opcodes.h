@@ -77,6 +77,9 @@ OPCODE(STORE_FIELD, -1)
 // Pop and discard the top of stack.
 OPCODE(POP, -1)
 
+// Push a copy of the value currently on the top of the stack.
+OPCODE(DUP, 1)
+
 // Invoke the method with symbol [arg]. The number indicates the number of
 // arguments (not including the receiver).
 OPCODE(CALL_0, 0)
