@@ -47,3 +47,27 @@ System.print("a" !~ "a")    // expect: false
 System.print("a" !~ "a ")   // expect: true
 System.print("a" !~ "bar")  // expect: true
 System.print("bar" !~ "a")  // expect: true
+
+// StringPart (substring match)
+System.print("b" ~~ "bar".part)       // expect: true
+System.print("a" ~~ "bar".part)       // expect: true
+System.print("r" ~~ "bar".part)       // expect: true
+System.print("x" ~~ "bar".part)       // expect: false
+System.print("ba" ~~ "bar".part)      // expect: true
+System.print("ar" ~~ "bar".part)      // expect: true
+System.print("bar" ~~ "bar".part)     // expect: true
+System.print("xbar" ~~ "bar".part)    // expect: false
+System.print("barx" ~~ "bar".part)    // expect: false
+
+System.print("b" !~ "bar".part)       // expect: false
+System.print("a" !~ "bar".part)       // expect: false
+System.print("r" !~ "bar".part)       // expect: false
+System.print("x" !~ "bar".part)       // expect: true
+System.print("ba" !~ "bar".part)      // expect: false
+System.print("ar" !~ "bar".part)      // expect: false
+System.print("bar" !~ "bar".part)     // expect: false
+System.print("xbar" !~ "bar".part)    // expect: true
+System.print("barx" !~ "bar".part)    // expect: true
+
+System.print("bar" ~~ "a".part)       // expect: false
+System.print("bar" !~ "a".part)       // expect: true
