@@ -111,6 +111,7 @@ typedef enum
   TOKEN_TRUE,
   TOKEN_VAR,
   TOKEN_WHILE,
+  TOKEN_SWITCH,
 
   TOKEN_FIELD,
   TOKEN_STATIC_FIELD,
@@ -623,6 +624,7 @@ static Keyword keywords[] =
   {"true",      4, TOKEN_TRUE},
   {"var",       3, TOKEN_VAR},
   {"while",     5, TOKEN_WHILE},
+  {"switch",    6, TOKEN_SWITCH},
   {NULL,        0, TOKEN_EOF} // Sentinel to mark the end of the array.
 };
 
@@ -2013,6 +2015,31 @@ static void callMethod(Compiler* compiler, int numArgs, const char* name,
   emitShortArg(compiler, (Code)(CODE_CALL_0 + numArgs), symbol);
 }
 
+// Compiles a function literal in braces.  [name] and [nameLength] are the
+// name the function will be given.
+static void functionLiteral(Compiler* compiler,
+                            const char* name, int nameLength)
+{
+    Compiler fnCompiler;
+    initCompiler(&fnCompiler, compiler->parser, compiler, false);
+
+    // Make a dummy signature to track the arity.
+    Signature fnSignature = { "", 0, SIG_METHOD, 0 };
+
+    // Parse the parameter list, if any.
+    if (match(compiler, TOKEN_PIPE))
+    {
+      finishParameterList(&fnCompiler, &fnSignature);
+      consume(compiler, TOKEN_PIPE, "Expect '|' after function parameters.");
+    }
+
+    fnCompiler.fn->arity = fnSignature.arity;
+
+    finishBody(&fnCompiler);
+
+    endCompiler(&fnCompiler, name, nameLength);
+}
+
 // Compiles an (optional) argument list for a method call with [methodSignature]
 // and then calls it.
 static void methodCall(Compiler* compiler, Code instruction,
@@ -2045,30 +2072,13 @@ static void methodCall(Compiler* compiler, Code instruction,
     called.type = SIG_METHOD;
     called.arity++;
 
-    Compiler fnCompiler;
-    initCompiler(&fnCompiler, compiler->parser, compiler, false);
-
-    // Make a dummy signature to track the arity.
-    Signature fnSignature = { "", 0, SIG_METHOD, 0 };
-
-    // Parse the parameter list, if any.
-    if (match(compiler, TOKEN_PIPE))
-    {
-      finishParameterList(&fnCompiler, &fnSignature);
-      consume(compiler, TOKEN_PIPE, "Expect '|' after function parameters.");
-    }
-
-    fnCompiler.fn->arity = fnSignature.arity;
-
-    finishBody(&fnCompiler);
-
     // Name the function based on the method its passed to.
-    char blockName[MAX_METHOD_SIGNATURE + 15];
+    char blockName[MAX_METHOD_SIGNATURE + 16];
     int blockLength;
     signatureToString(&called, blockName, &blockLength);
     memmove(blockName + blockLength, " block argument", 16);
 
-    endCompiler(&fnCompiler, blockName, blockLength + 15);
+    functionLiteral(compiler, blockName, blockLength + 15);
   }
 
   // TODO: Allow Grace-style mixfix methods?
@@ -2596,7 +2606,6 @@ static void conditional(Compiler* compiler, bool canAssign)
 
 void infixOp(Compiler* compiler, bool canAssign)
 {
-  Code instruction = CODE_CALL_0;
   GrammarRule* rule = getRule(compiler->parser->previous.type);
 
   // An infix operator cannot end an expression.
@@ -2826,6 +2835,7 @@ GrammarRule rules[] =
   /* TOKEN_TRUE          */ PREFIX(boolean),
   /* TOKEN_VAR           */ UNUSED,
   /* TOKEN_WHILE         */ UNUSED,
+  /* TOKEN_SWITCH        */ UNUSED,
   /* TOKEN_FIELD         */ PREFIX(field),
   /* TOKEN_STATIC_FIELD  */ PREFIX(staticField),
   /* TOKEN_NAME          */ { name, NULL, namedSignature, PREC_NONE, NULL },
@@ -3191,6 +3201,69 @@ static void whileStatement(Compiler* compiler)
   endLoop(compiler);
 }
 
+// Switch: a series of (topic == test) conditions
+static void switchStatement(Compiler* compiler)
+{
+  Signature testEquality = { "==", 2, SIG_METHOD, 1 };
+  IntBuffer cases;
+  wrenIntBufferInit(&cases);
+
+  // Compile the topic expresssion
+  consume(compiler, TOKEN_LEFT_PAREN, "Expect '(' after 'switch'.");
+  expression(compiler);
+  consume(compiler, TOKEN_RIGHT_PAREN, "Expect ')' after switch topic.");
+  consume(compiler, TOKEN_LEFT_BRACE, "Expect '{' after switch topic.");
+  consumeLine(compiler, "Expect newline after '{' starting switch statement.");
+
+  while (!compiler->parser->hasError)
+  {
+    if (match(compiler, TOKEN_ELSE))
+    {
+      // optional colon after `else` for ergonomics
+      match(compiler, TOKEN_COLON);
+
+      statement(compiler);
+      consumeLine(compiler, "Expect newline after switch case.");
+      break;
+    }
+
+    if (peek(compiler) == TOKEN_RIGHT_BRACE)
+    {
+      break;
+    }
+
+    // Normal case: emit topic ~~ test
+    emitOp(compiler, CODE_DUP);   // copy the topic's value
+    expression(compiler);
+    callSignature(compiler, CODE_CALL_0, &testEquality);
+
+    consume(compiler, TOKEN_COLON, "Expect ':' after switch expression.");
+
+    // Jump to the next case if the condition is false.
+    int nextCaseJump = emitJump(compiler, CODE_JUMP_IF);
+    statement(compiler);
+
+    // jump past the rest of the cases
+    int toEndJump = emitJump(compiler, CODE_JUMP);
+    wrenIntBufferWrite(compiler->parser->vm, &cases, toEndJump);
+
+    patchJump(compiler, nextCaseJump);
+
+    consumeLine(compiler, "Expect newline after switch case.");
+  }
+
+  // Point all the end-of-case jumps here
+  for (int i=0; i<cases.count; ++i)
+  {
+    patchJump(compiler, cases.data[i]);
+  }
+
+  emitOp(compiler, CODE_POP);     // Remove the original topic value
+  consume(compiler, TOKEN_RIGHT_BRACE, "Expect '}' after switch body.");
+
+  wrenIntBufferClear(compiler->parser->vm, &cases);
+}
+
 // Compiles a simple statement. These can only appear at the top-level or
 // within curly blocks. Simple statements exclude variable binding statements
 // like "var" and "class" which are not allowed directly in places like the
@@ -3267,6 +3340,10 @@ void statement(Compiler* compiler)
   else if (match(compiler, TOKEN_WHILE))
   {
     whileStatement(compiler);
+  }
+  else if (match(compiler, TOKEN_SWITCH))
+  {
+    switchStatement(compiler);
   }
   else if (match(compiler, TOKEN_LEFT_BRACE))
   {

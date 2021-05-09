@@ -58,8 +58,6 @@ DEF_PRIMITIVE(class_attributes)
 // This is very similar to object_is(), but also permits subclass testing.
 DEF_PRIMITIVE(class_tildetilde)
 {
-  bool result;
-
   if (!IS_CLASS(args[0]))
   {
     RETURN_ERROR("Right operand must be a class.");
@@ -82,8 +80,6 @@ DEF_PRIMITIVE(class_tildetilde)
 
 DEF_PRIMITIVE(class_bangtilde)
 {
-  bool result;
-
   if (!IS_CLASS(args[0]))
   {
     RETURN_ERROR("Right operand must be a class.");
