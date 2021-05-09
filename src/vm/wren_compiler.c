@@ -3201,10 +3201,10 @@ static void whileStatement(Compiler* compiler)
   endLoop(compiler);
 }
 
-// Switch: a series of (topic == test) conditions
+// Switch: a series of (topic ~~ test) conditions
 static void switchStatement(Compiler* compiler)
 {
-  Signature testEquality = { "==", 2, SIG_METHOD, 1 };
+  Signature smartmatch = { "~~", 2, SIG_METHOD, 1 };
   IntBuffer cases;
   wrenIntBufferInit(&cases);
 
@@ -3234,8 +3234,21 @@ static void switchStatement(Compiler* compiler)
 
     // Normal case: emit topic ~~ test
     emitOp(compiler, CODE_DUP);   // copy the topic's value
-    expression(compiler);
-    callSignature(compiler, CODE_CALL_0, &testEquality);
+    if (match(compiler, TOKEN_LEFT_BRACE))
+    {
+      if (peek(compiler) != TOKEN_PIPE)
+      {
+        error(compiler, "Hash literals are not allowed in switch cases.  Please use a list of the hash keys instead.");
+      }
+
+      functionLiteral(compiler, "switch test", 11); // 11 = string length
+    }
+    else
+    {
+      expression(compiler);
+    }
+    emitOp(compiler, CODE_SWAP);  // smartmatch: make the test the invocant
+    callSignature(compiler, CODE_CALL_0, &smartmatch);
 
     consume(compiler, TOKEN_COLON, "Expect ':' after switch expression.");
 
