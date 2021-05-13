@@ -23,6 +23,14 @@ static ObjClosure* mirrorGetSlotClosure(WrenVM* vm, int slot)
   return AS_CLOSURE(closureVal);
 }
 
+static ObjFiber* mirrorGetSlotFiber(WrenVM* vm, int slot)
+{
+  Value fiberVal = *wrenSlotAtUnsafe(vm, slot);
+  if (!IS_FIBER(fiberVal)) return NULL;
+
+  return AS_FIBER(fiberVal);
+}
+
 static ObjModule* mirrorGetSlotModule(WrenVM* vm, int slot)
 {
   Value moduleVal = *wrenSlotAtUnsafe(vm, slot);
@@ -66,6 +74,55 @@ static void mirrorClassMirrorMethodNames(WrenVM* vm)
     *wrenSlotAtUnsafe(vm, 1) = OBJ_VAL(vm->methodNames.data[symbol]);
     wrenInsertInList(vm, 0, -1, 1);
   }
+}
+
+static void mirrorFiberMirrorMethodAt(WrenVM* vm)
+{
+  ObjFiber* fiber = mirrorGetSlotFiber(vm, 1);
+  size_t index = wrenGetSlotDouble(vm, 2);
+  CallFrame* frame;
+
+  if (fiber == NULL ||
+      (frame = &fiber->frames[index])->closure == NULL)
+  {
+    wrenSetSlotNull(vm, 0);
+    return;
+  }
+  *wrenSlotAtUnsafe(vm, 0) = OBJ_VAL(frame->closure);
+}
+
+static void mirrorFiberMirrorLineAt(WrenVM* vm)
+{
+  ObjFiber* fiber = mirrorGetSlotFiber(vm, 1);
+  size_t index = wrenGetSlotDouble(vm, 2);
+  CallFrame* frame;
+  ObjFn* fn;
+
+  if (fiber == NULL ||
+      (frame = &fiber->frames[index]) == NULL ||
+      (fn = frame->closure->fn) == NULL ||
+      fn->debug->sourceLines.data == NULL)
+  {
+    wrenSetSlotNull(vm, 0);
+    return;
+  }
+
+  size_t line = fn->debug->sourceLines.data[frame->ip - fn->code.data - 1];
+
+  wrenSetSlotDouble(vm, 0, line);
+}
+
+static void mirrorFiberMirrorStackFramesCount(WrenVM* vm)
+{
+  ObjFiber* fiber = mirrorGetSlotFiber(vm, 1);
+
+  if (fiber == NULL)
+  {
+    wrenSetSlotNull(vm, 0);
+    return;
+  }
+
+  wrenSetSlotDouble(vm, 0, fiber->numFrames);
 }
 
 static void mirrorMethodMirrorBoundToClass_(WrenVM* vm)
@@ -190,6 +247,25 @@ WrenForeignMethodFn wrenMirrorBindForeignMethod(WrenVM* vm,
         strcmp(signature, "methodNames(_)") == 0)
     {
       return mirrorClassMirrorMethodNames;
+    }
+  }
+
+  if (strcmp(className, "FiberMirror") == 0)
+  {
+    if (isStatic &&
+        strcmp(signature, "methodAt_(_,_)") == 0)
+    {
+      return mirrorFiberMirrorMethodAt;
+    }
+    if (isStatic &&
+        strcmp(signature, "lineAt_(_,_)") == 0)
+    {
+      return mirrorFiberMirrorLineAt;
+    }
+    if (isStatic &&
+        strcmp(signature, "stackFramesCount_(_)") == 0)
+    {
+      return mirrorFiberMirrorStackFramesCount;
     }
   }
 
