@@ -6,6 +6,7 @@
 #include "wren_common.h"
 #include "wren_compiler.h"
 #include "wren_vm.h"
+#include "wren_strtod.h"
 
 #if WREN_DEBUG_DUMP_COMPILED_CODE
   #include "wren_debug.h"
@@ -754,7 +755,7 @@ static void makeNumber(Parser* parser, bool isHex)
   }
   else
   {
-    parser->next.value = NUM_VAL(strtod(parser->tokenStart, NULL));
+    parser->next.value = NUM_VAL(wrenStrtod(parser->tokenStart, NULL));
   }
   
   if (errno == ERANGE)

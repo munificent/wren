@@ -256,8 +256,10 @@
     <ClInclude Include="..\..\src\vm\wren_compiler.h" />
     <ClInclude Include="..\..\src\vm\wren_core.h" />
     <ClInclude Include="..\..\src\vm\wren_debug.h" />
+    <ClInclude Include="..\..\src\vm\wren_math.h" />
     <ClInclude Include="..\..\src\vm\wren_opcodes.h" />
     <ClInclude Include="..\..\src\vm\wren_primitive.h" />
+    <ClInclude Include="..\..\src\vm\wren_strtod.h" />
     <ClInclude Include="..\..\src\vm\wren_utils.h" />
     <ClInclude Include="..\..\src\vm\wren_value.h" />
     <ClInclude Include="..\..\src\vm\wren_vm.h" />
@@ -269,6 +271,7 @@
     <ClCompile Include="..\..\src\vm\wren_core.c" />
     <ClCompile Include="..\..\src\vm\wren_debug.c" />
     <ClCompile Include="..\..\src\vm\wren_primitive.c" />
+    <ClCompile Include="..\..\src\vm\wren_strtod.c" />
     <ClCompile Include="..\..\src\vm\wren_utils.c" />
     <ClCompile Include="..\..\src\vm\wren_value.c" />
     <ClCompile Include="..\..\src\vm\wren_vm.c" />
