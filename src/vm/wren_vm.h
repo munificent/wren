@@ -145,6 +145,11 @@ ObjClosure* wrenCompileSource(WrenVM* vm, const char* module,
                               const char* source, bool isExpression,
                               bool printErrors);
 
+// Looks up the previously loaded module with [name].
+//
+// Returns `NULL` if no module with that name has been loaded.
+ObjModule* wrenGetModule(WrenVM* vm, Value name);
+
 // Looks up a variable from a previously-loaded module.
 //
 // Aborts the current fiber if the module or variable could not be found.

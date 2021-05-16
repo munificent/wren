@@ -441,10 +441,7 @@ static void methodNotFound(WrenVM* vm, ObjClass* classObj, int symbol)
       OBJ_VAL(classObj->name), vm->methodNames.data[symbol]->value);
 }
 
-// Looks up the previously loaded module with [name].
-//
-// Returns `NULL` if no module with that name has been loaded.
-static ObjModule* getModule(WrenVM* vm, Value name)
+ObjModule* wrenGetModule(WrenVM* vm, Value name)
 {
   Value moduleValue = wrenMapGet(vm->modules, name);
   return !IS_UNDEFINED(moduleValue) ? AS_MODULE(moduleValue) : NULL;
@@ -454,7 +451,7 @@ static ObjClosure* compileInModule(WrenVM* vm, Value name, const char* source,
                                    bool isExpression, bool printErrors)
 {
   // See if the module has already been loaded.
-  ObjModule* module = getModule(vm, name);
+  ObjModule* module = wrenGetModule(vm, name);
   if (module == NULL)
   {
     module = wrenNewModule(vm, AS_STRING(name));
@@ -471,7 +468,7 @@ static ObjClosure* compileInModule(WrenVM* vm, Value name, const char* source,
     wrenPopRoot(vm);
 
     // Implicitly import the core module.
-    ObjModule* coreModule = getModule(vm, NULL_VAL);
+    ObjModule* coreModule = wrenGetModule(vm, NULL_VAL);
     for (int i = 0; i < coreModule->variables.count; i++)
     {
       wrenDefineVariable(vm, module,
@@ -1541,7 +1538,7 @@ ObjClosure* wrenCompileSource(WrenVM* vm, const char* module, const char* source
 
 Value wrenGetModuleVariable(WrenVM* vm, Value moduleName, Value variableName)
 {
-  ObjModule* module = getModule(vm, moduleName);
+  ObjModule* module = wrenGetModule(vm, moduleName);
   if (module == NULL)
   {
     vm->fiber->error = wrenStringFormat(vm, "Module '@' is not loaded.",
@@ -1928,7 +1925,7 @@ void wrenGetVariable(WrenVM* vm, const char* module, const char* name,
   Value moduleName = wrenStringFormat(vm, "$", module);
   wrenPushRoot(vm, AS_OBJ(moduleName));
   
-  ObjModule* moduleObj = getModule(vm, moduleName);
+  ObjModule* moduleObj = wrenGetModule(vm, moduleName);
   ASSERT(moduleObj != NULL, "Could not find module.");
   
   wrenPopRoot(vm); // moduleName.
@@ -1949,7 +1946,7 @@ bool wrenHasVariable(WrenVM* vm, const char* module, const char* name)
   wrenPushRoot(vm, AS_OBJ(moduleName));
 
   //We don't use wrenHasModule since we want to use the module object.
-  ObjModule* moduleObj = getModule(vm, moduleName);
+  ObjModule* moduleObj = wrenGetModule(vm, moduleName);
   ASSERT(moduleObj != NULL, "Could not find module.");
 
   wrenPopRoot(vm); // moduleName.
@@ -1967,7 +1964,7 @@ bool wrenHasModule(WrenVM* vm, const char* module)
   Value moduleName = wrenStringFormat(vm, "$", module);
   wrenPushRoot(vm, AS_OBJ(moduleName));
 
-  ObjModule* moduleObj = getModule(vm, moduleName);
+  ObjModule* moduleObj = wrenGetModule(vm, moduleName);
   
   wrenPopRoot(vm); // moduleName.
 
