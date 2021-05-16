@@ -318,7 +318,7 @@ for (i in 1..2) {
 System.print(3)    //>  not reached
 </pre>
 
-Although it is not invalid to return a value, there is no way to access that value and it is therefore simply discarded.
+Although it is not invalid to return a value, it can only be accessed using meta-programming - reading the file contents and compiling them with the Meta.compile method. Otherwise it would simply be discarded.
 
 <br><hr>
 <a href="error-handling.html">&larr; Error Handling</a>

@@ -10,7 +10,7 @@ It must be imported from the [meta](meta.html) module:
 
 ## Static Methods
 
-### **getModuleVariables**(module)
+### Meta.**getModuleVariables**(module)
 
 Returns a list of all module level variables defined or visible in `module`.
 
@@ -51,7 +51,7 @@ Notice that `g` is not included in this list as it is a local variable rather th
 
 It is a runtime error if `module` is not a string or cannot be found.
 
-### **eval**(source)
+### Meta.**eval**(source)
 
 Compiles Wren source code into a closure and then executes the closure automatically.
 
@@ -73,7 +73,7 @@ var source = """
 Meta.eval(source)  //> 6
 </pre>
 
-### **compileExpression**(expression)
+### Meta.**compileExpression**(expression)
 
 Compiles a Wren expression into a closure and then returns the closure. It does not execute it.
 
@@ -95,7 +95,7 @@ var closure = Meta.compileExpression(expression)
 System.print(closure.call()) //> 20
 </pre>
 
-### **compile**(source)
+### Meta.**compile**(source)
 
 Compiles Wren source code into a closure and then returns the closure. It does not execute it.
 
