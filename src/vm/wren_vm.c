@@ -1653,6 +1653,12 @@ static void validateApiSlot(WrenVM* vm, int slot)
   ASSERT(slot < wrenGetSlotCount(vm), "Not that many slots.");
 }
 
+Value* wrenSlotAtUnsafe(WrenVM* vm, int slot)
+{
+  validateApiSlot(vm, slot);
+  return &vm->apiStack[slot];
+}
+
 // Gets the type of the object in [slot].
 WrenType wrenGetSlotType(WrenVM* vm, int slot)
 {
