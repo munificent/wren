@@ -247,12 +247,14 @@ typedef struct
 typedef struct
 {
   Obj obj;
-  
+
   ByteBuffer code;
   ValueBuffer constants;
   
   // The module where this function was defined.
   ObjModule* module;
+
+  ObjClass* boundToClass;
 
   // The maximum number of stack slots this function may use.
   int maxSlots;
