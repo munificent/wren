@@ -10,21 +10,26 @@
 void metaCompile(WrenVM* vm)
 {
   const char* source = wrenGetSlotString(vm, 1);
-  bool isExpression = wrenGetSlotBool(vm, 2);
-  bool printErrors = wrenGetSlotBool(vm, 3);
+  const char* module;
+  bool isExpression = wrenGetSlotBool(vm, 3);
+  bool printErrors = wrenGetSlotBool(vm, 4);
 
-  // TODO: Allow passing in module?
-  // Look up the module surrounding the callsite. This is brittle. The -2 walks
-  // up the callstack assuming that the meta module has one level of
-  // indirection before hitting the user's code. Any change to meta may require
-  // this constant to be tweaked.
-  ObjFiber* currentFiber = vm->fiber;
-  ObjFn* fn = currentFiber->frames[currentFiber->numFrames - 2].closure->fn;
-  ObjString* module = fn->module->name;
+  if (wrenGetSlotType(vm, 2) != WREN_TYPE_NULL) {
+    module = wrenGetSlotString(vm, 2);
+  } else {
+    // Look up the module surrounding the callsite. This is brittle. The -2 walks
+    // up the callstack assuming that the meta module has one level of
+    // indirection before hitting the user's code. Any change to meta may require
+    // this constant to be tweaked.
+    ObjFiber* currentFiber = vm->fiber;
+    ObjFn* fn = currentFiber->frames[currentFiber->numFrames - 2].closure->fn;
+    ObjString* moduleName = fn->module->name;
+    module = moduleName->value;
+  }
 
-  ObjClosure* closure = wrenCompileSource(vm, module->value, source,
+  ObjClosure* closure = wrenCompileSource(vm, module, source,
                                           isExpression, printErrors);
-  
+
   // Return the result. We can't use the public API for this since we have a
   // bare ObjClosure*.
   if (closure == NULL)
@@ -40,14 +45,14 @@ void metaCompile(WrenVM* vm)
 void metaGetModuleVariables(WrenVM* vm)
 {
   wrenEnsureSlots(vm, 3);
-  
+
   Value moduleValue = wrenMapGet(vm->modules, vm->apiStack[1]);
   if (IS_UNDEFINED(moduleValue))
   {
     vm->apiStack[0] = NULL_VAL;
     return;
   }
-    
+
   ObjModule* module = AS_MODULE(moduleValue);
   ObjList* names = wrenNewList(vm, module->variableNames.count);
   vm->apiStack[0] = OBJ_VAL(names);
@@ -58,7 +63,7 @@ void metaGetModuleVariables(WrenVM* vm)
   {
     names->elements.data[i] = NULL_VAL;
   }
-  
+
   for (int i = 0; i < names->elements.count; i++)
   {
     names->elements.data[i] = OBJ_VAL(module->variableNames.data[i]);
@@ -78,17 +83,17 @@ WrenForeignMethodFn wrenMetaBindForeignMethod(WrenVM* vm,
   // There is only one foreign method in the meta module.
   ASSERT(strcmp(className, "Meta") == 0, "Should be in Meta class.");
   ASSERT(isStatic, "Should be static.");
-  
-  if (strcmp(signature, "compile_(_,_,_)") == 0)
+
+  if (strcmp(signature, "compile_(_,_,_,_)") == 0)
   {
     return metaCompile;
   }
-  
+
   if (strcmp(signature, "getModuleVariables_(_)") == 0)
   {
     return metaGetModuleVariables;
   }
-  
+
   ASSERT(false, "Unknown method.");
   return NULL;
 }
