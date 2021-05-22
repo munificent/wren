@@ -743,20 +743,163 @@ static int readHexDigit(Parser* parser)
   return -1;
 }
 
+static int readOctDigit(Parser* parser)
+{
+  char c = nextChar(parser);
+  if (c >= '0' && c <= '7') return c - '0';
+
+  parser->currentChar--;
+  return -1;
+}
+
+static int readBinDigit(Parser* parser)
+{
+  char c = nextChar(parser);
+  if (c == '0') return 0;
+  else if (c == '1') return 1;
+
+  parser->currentChar--;
+  return -1;
+}
+
+#include <limits.h>
+static long long wrenStrToLL(Parser* parser, int base) {
+  long long num = 0;
+  long long cutoff = LLONG_MAX, cutlimit = cutoff % base;
+  bool tooBig = false;
+  cutoff /= base;
+  for(unsigned char c;;)
+  {
+    c = nextChar(parser);
+    if(c >= '0' && c <= '9') c -= '0';
+    else if(c >= 'a' && c <= 'z') c -= 'a' - 10;
+    else if(c >= 'A' && c <= 'Z') c -= 'A' - 10;
+    else if(c == '_') continue;
+    else
+    {
+      parser->currentChar--;
+      break;
+    }
+    if(c >= base) 
+    {
+      parser->currentChar--;
+      break;
+    }
+    if(num > cutoff || (num == cutoff && c > cutlimit)) tooBig = true;
+    if(!tooBig)
+    {
+      num *= base;
+      num += c;
+    }
+  }
+  if(tooBig)
+  {
+    errno = ERANGE;
+    return LLONG_MAX;
+  }
+  return num;
+}
+
+#include <float.h>
+// The most amount of significant denary digits that can fit in a 52-bit number (the size of a double's mantissa)
+#define DBL_MAX_SIGNIFICAND_DIGITS 16
+static double wrenStrToD(const char* str, void* v) {
+  double num = 0;
+  int digits = 0;
+  char c;
+  int e = 0;
+  for(;;)
+  {
+    c = *str++;
+    if(c >= '0' && c <= '9') c -= '0';
+    else if(c == '_') continue;
+    else
+    {
+      str--;
+      break;
+    }
+    if(digits <= DBL_MAX_SIGNIFICAND_DIGITS)
+    {
+      if(num > 0) ++digits;
+      num *= 10;
+      num += c;
+    }
+    else e++;
+    
+  }
+  if(*str++ == '.') 
+  {
+    for(;;)
+    {
+      c = *str++;
+      if(c >= '0' && c <= '9') c -= '0';
+      else if(c == '_') continue;
+      else
+      {
+        str--;
+        break;
+      }
+      if(digits <= DBL_MAX_SIGNIFICAND_DIGITS)
+      {
+        if(num > 0) ++digits;
+        num *= 10;
+        num += c;
+        e--;
+      }
+    }
+  }
+  else str--;
+  c = *str++;
+  if(c == 'E' || c == 'e')
+  {
+    int e2 = 0;
+    bool neg = false;
+    c = *str++;
+    if(c == '-') neg = true;
+    else if(c == '+') neg = false;
+    else str--;
+    for(;;)
+    {
+      c = *str++;
+      if(c >= '0' && c <= '9') c -= '0';
+      else if(c == '_') continue;
+      else
+      {
+        str--;
+        break;
+      }
+      e2 *= 10;
+      e2 += c;
+    }
+    if(neg) e2 *= -1;
+    e += e2;
+  }
+  else str--;
+  if(digits + e >= DBL_MAX_10_EXP)
+  {
+    errno = ERANGE;
+    return INFINITY;
+  }
+  if(digits + e <= DBL_MIN_10_EXP)
+  {
+    return 0;
+  }
+  return num * pow(10.0, (double)(e));;
+}
+
 // Parses the numeric value of the current token.
-static void makeNumber(Parser* parser, bool isHex)
+static void makeNumber(Parser* parser, bool isDeci, int base)
 {
   errno = 0;
 
-  if (isHex)
+  if (isDeci)
   {
-    parser->next.value = NUM_VAL((double)strtoll(parser->tokenStart, NULL, 16));
+    parser->next.value = NUM_VAL(wrenStrToD(parser->tokenStart, NULL));
   }
   else
   {
-    parser->next.value = NUM_VAL(strtod(parser->tokenStart, NULL));
+    parser->next.value = NUM_VAL((double)wrenStrToLL(parser, base));
   }
-  
   if (errno == ERANGE)
   {
     lexError(parser, "Number literal was too large (%d).", sizeof(long int));
@@ -769,29 +912,17 @@ static void makeNumber(Parser* parser, bool isHex)
   makeToken(parser, TOKEN_NUMBER);
 }
 
-// Finishes lexing a hexadecimal number literal.
-static void readHexNumber(Parser* parser)
-{
-  // Skip past the `x` used to denote a hexadecimal literal.
-  nextChar(parser);
-
-  // Iterate over all the valid hexadecimal digits found.
-  while (readHexDigit(parser) != -1) continue;
-
-  makeNumber(parser, true);
-}
-
 // Finishes lexing a number literal.
 static void readNumber(Parser* parser)
 {
-  while (isDigit(peekChar(parser))) nextChar(parser);
+  while (isDigit(peekChar(parser)) || peekChar(parser) == '_') nextChar(parser);
 
   // See if it has a floating point. Make sure there is a digit after the "."
   // so we don't get confused by method calls on number literals.
-  if (peekChar(parser) == '.' && isDigit(peekNextChar(parser)))
+  if (peekChar(parser) == '.' && (isDigit(peekNextChar(parser)) || peekNextChar(parser) == '_'))
   {
     nextChar(parser);
-    while (isDigit(peekChar(parser))) nextChar(parser);
+    while (isDigit(peekChar(parser)) || peekChar(parser) == '_') nextChar(parser);
   }
 
   // See if the number is in scientific notation.
@@ -803,15 +934,15 @@ static void readNumber(Parser* parser)
       matchChar(parser, '-');
     }
 
-    if (!isDigit(peekChar(parser)))
+    if (!isDigit(peekChar(parser)) || peekChar(parser) == '_')
     {
       lexError(parser, "Unterminated scientific notation.");
     }
 
-    while (isDigit(peekChar(parser))) nextChar(parser);
+    while (isDigit(peekChar(parser)) || peekChar(parser) == '_') nextChar(parser);
   }
 
-  makeNumber(parser, false);
+  makeNumber(parser, true, 10);
 }
 
 // Finishes lexing an identifier. Handles reserved words.
@@ -1194,10 +1325,20 @@ static void nextToken(Parser* parser)
         return;
 
       case '0':
-        if (peekChar(parser) == 'x')
+        switch (peekChar(parser))
         {
-          readHexNumber(parser);
-          return;
+          case 'x':
+            nextChar(parser);
+            makeNumber(parser, false, 16);
+            return;
+          case 'o':
+            nextChar(parser);
+            makeNumber(parser, false, 8);
+            return;
+          case 'b':
+            nextChar(parser);
+            makeNumber(parser, false, 2);
+            return;
         }
 
         readNumber(parser);
