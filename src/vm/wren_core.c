@@ -4,6 +4,7 @@
 #include <math.h>
 #include <string.h>
 #include <time.h>
+#include <stdio.h>
 
 #include "wren_common.h"
 #include "wren_core.h"
@@ -156,6 +157,55 @@ DEF_PRIMITIVE(fiber_error)
 {
   RETURN_VAL(AS_FIBER(args[0])->error);
 }
+
+#define OUT_BUFSIZ 1024*16
+#define LINE_BUFSIZ 512
+DEF_PRIMITIVE(fiber_stackTrace)
+{
+  ObjFiber* fiber = AS_FIBER(args[0]);
+
+  // Allocate 16kb for our output string
+  char outputBuffer[OUT_BUFSIZ];
+  outputBuffer[0] = 0;
+  int bytesWritten = 0;
+  
+  // Allocate 512byte for one line int the output
+  const char lineBuffer[512];
+
+  for (int i = fiber->numFrames - 1; i >= 0; i--)
+  {
+    CallFrame* frame = &fiber->frames[i];
+    ObjFn* fn = frame->closure->fn;
+
+    // Skip over stub functions for calling methods from the C API.
+    if (fn->module == NULL) continue;
+    
+    // The built-in core module has no name. We explicitly omit it from stack
+    // traces since we don't want to highlight to a user the implementation
+    // detail of what part of the core module is written in C and what is Wren.
+    if (fn->module->name == NULL) continue;    
+
+    // -1 because IP has advanced past the instruction that it just executed.
+    int linePos = frame->ip - fn->code.data - 1;
+
+    // If fiber hasn't been run we will return null
+    if(linePos == -1) RETURN_NULL;
+
+    int line = fn->debug->sourceLines.data[linePos];
+
+    // Format into our line buffer
+  	int size = snprintf((char*)&lineBuffer[0], LINE_BUFSIZ, "at %s:(%s) line %i\n", fn->debug->name, fn->module->name->value, line); 
+    bytesWritten += ((size > LINE_BUFSIZ) ? LINE_BUFSIZ : size);
+    
+    // Append to our output buffer if there is size left
+    if(bytesWritten+1 < OUT_BUFSIZ) strcat(outputBuffer, &lineBuffer[0]);   
+  }
+  // Copy our string to managed memory
+  Value returnVal = wrenNewString(vm, outputBuffer);
+  RETURN_VAL(returnVal);
+}
+#undef OUT_BUFSIZ
+#undef LINE_BUFSIZ
 
 DEF_PRIMITIVE(fiber_isDone)
 {
@@ -1312,6 +1362,7 @@ void wrenInitializeCore(WrenVM* vm)
   PRIMITIVE(vm->fiberClass, "call()", fiber_call);
   PRIMITIVE(vm->fiberClass, "call(_)", fiber_call1);
   PRIMITIVE(vm->fiberClass, "error", fiber_error);
+  PRIMITIVE(vm->fiberClass, "stackTrace", fiber_stackTrace);
   PRIMITIVE(vm->fiberClass, "isDone", fiber_isDone);
   PRIMITIVE(vm->fiberClass, "transfer()", fiber_transfer);
   PRIMITIVE(vm->fiberClass, "transfer(_)", fiber_transfer1);
