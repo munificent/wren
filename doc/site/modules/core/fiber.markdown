@@ -6,15 +6,17 @@ A lightweight coroutine. [Here][fibers] is a gentle introduction.
 
 ## Static Methods
 
-### Fiber.**abort**(message)
+### Fiber.**abort**(value)
 
-Raises a runtime error with the provided message:
+Raises a runtime error with the provided value.
 
 <pre class="snippet">
 Fiber.abort("Something bad happened.")
+Fiber.abort(CustomError.new())
+Fiber.abort(32)
 </pre>
 
-If the message is `null`, does nothing.
+If the value is `null`, does nothing.
 
 ### Fiber.**current**
 
@@ -142,8 +144,9 @@ fiber.call("resume")
 
 ### **error**
 
-The error message that was passed when aborting the fiber, or `null` if the
-fiber has not been aborted.
+The error value that was passed when aborting the fiber, or `null` if the
+fiber has not been aborted. Wren internal error values will always be
+Strings.
 
 <pre class="snippet">
 var fiber = Fiber.new {
@@ -196,7 +199,7 @@ If the called fiber raises an error, it can no longer be used.
 
 Pauses execution of the current running fiber, and transfers control to this fiber.
 
-[Read more][transfers] about the difference between `call` and `transfer`. 
+[Read more][transfers] about the difference between `call` and `transfer`.
 Unlike `call`, `transfer` doesn't track the origin of the transfer.
 
 [transfers]: ../../concurrency.html#transferring-control
@@ -242,7 +245,7 @@ fiber.transfer(32)                //> #5: send to 'result'
 
 ### **transferError**(error)
 
-Transfer to this fiber, but set this fiber into an error state. 
+Transfer to this fiber, but set this fiber into an error state.
 The `fiber.error` value will be populated with the value in `error`.
 
 <pre class="snippet">
@@ -252,7 +255,7 @@ var A = Fiber.new {
 }
 
 var B = Fiber.new {
-  System.print("started B")            //> #2 
+  System.print("started B")            //> #2
   A.transfer()                         //> #3
   System.print("should not get here")
 }
