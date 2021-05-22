@@ -99,6 +99,9 @@ struct WrenVM
   // initialized.
   Value* apiStack;
 
+  // Set during foreign calls to indicate multiple return values
+  int numForeignReturnValues;
+
   WrenConfiguration config;
   
   // Compiler and debugger data:

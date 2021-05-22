@@ -551,4 +551,7 @@ WREN_API void* wrenGetUserData(WrenVM* vm);
 // Sets user data associated with the WrenVM.
 WREN_API void wrenSetUserData(WrenVM* vm, void* userData);
 
+// Sets how many values are returned from a foreign call.
+void wrenSetForeignReturnValues(WrenVM* vm, int num);
+
 #endif

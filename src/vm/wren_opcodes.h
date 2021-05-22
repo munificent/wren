@@ -141,6 +141,10 @@ OPCODE(CLOSE_UPVALUE, -1)
 // stack.
 OPCODE(RETURN, 0)
 
+// Exit from the current function and return several values on the top of
+// the stack.
+OPCODE(RETURN_MULTIPLE, 0)
+
 // Creates a closure for the function stored at [arg] in the constant table.
 //
 // Following the function argument is a number of arguments, two for each

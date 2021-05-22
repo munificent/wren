@@ -1765,24 +1765,29 @@ static void patchJump(Compiler* compiler, int offset)
 
 // Parses a block body, after the initial "{" has been consumed.
 //
-// Returns true if it was a expression body, false if it was a statement body.
-// (More precisely, returns true if a value was left on the stack. An empty
-// block returns false.)
-static bool finishBlock(Compiler* compiler)
+// Returns number of values left on the stack, zero for empty block.
+// A value >= 1 was an expression body, zero if it was a statement body.
+static int finishBlock(Compiler* compiler)
 {
   // Empty blocks do nothing.
-  if (match(compiler, TOKEN_RIGHT_BRACE)) return false;
+  if (match(compiler, TOKEN_RIGHT_BRACE)) return 0;
 
   // If there's no line after the "{", it's a single-expression body.
   if (!matchLine(compiler))
   {
-    expression(compiler);
+    int returnValues = 0;
+    do
+    {
+      expression(compiler);
+      returnValues++;
+    } while (match(compiler, TOKEN_COMMA));
+
     consume(compiler, TOKEN_RIGHT_BRACE, "Expect '}' at end of block.");
-    return true;
+    return returnValues;
   }
 
   // Empty blocks (with just a newline inside) do nothing.
-  if (match(compiler, TOKEN_RIGHT_BRACE)) return false;
+  if (match(compiler, TOKEN_RIGHT_BRACE)) return 0;
 
   // Compile the definition list.
   do
@@ -1793,7 +1798,7 @@ static bool finishBlock(Compiler* compiler)
   while (peek(compiler) != TOKEN_RIGHT_BRACE && peek(compiler) != TOKEN_EOF);
   
   consume(compiler, TOKEN_RIGHT_BRACE, "Expect '}' at end of block.");
-  return false;
+  return 0;
 }
 
 // Parses a method or function body, after the initial "{" has been consumed.
@@ -1802,23 +1807,34 @@ static bool finishBlock(Compiler* compiler)
 // initializer. In that case, this adds the code to ensure it returns `this`.
 static void finishBody(Compiler* compiler)
 {
-  bool isExpressionBody = finishBlock(compiler);
+  int returnValues = finishBlock(compiler);
 
   if (compiler->isInitializer)
   {
-    // If the initializer body evaluates to a value, discard it.
-    if (isExpressionBody) emitOp(compiler, CODE_POP);
+    // If the initializer body evaluates to values, discard them.
+    for (int i = 0; i < returnValues; i++)
+    {
+      emitOp(compiler, CODE_POP);
+    }
 
     // The receiver is always stored in the first local slot.
     emitOp(compiler, CODE_LOAD_LOCAL_0);
+    returnValues = 1;
   }
-  else if (!isExpressionBody)
+  else if (returnValues == 0)
   {
     // Implicitly return null in statement bodies.
     emitOp(compiler, CODE_NULL);
   }
 
-  emitOp(compiler, CODE_RETURN);
+  if (returnValues <= 1)
+  {
+    emitOp(compiler, CODE_RETURN);
+  }
+  else
+  {
+    emitByteArg(compiler, CODE_RETURN_MULTIPLE, returnValues);
+  }
 }
 
 // The VM can only handle a certain number of parameters, so check that we
@@ -2897,6 +2913,7 @@ static int getByteCountForArguments(const uint8_t* bytecode,
     case CODE_LOAD_FIELD:
     case CODE_STORE_FIELD:
     case CODE_CLASS:
+    case CODE_RETURN_MULTIPLE:
       return 1;
 
     case CODE_CONSTANT:
@@ -3220,6 +3237,7 @@ void statement(Compiler* compiler)
   else if (match(compiler, TOKEN_RETURN))
   {
     // Compile the return value.
+    int returnValues = 0;
     if (peek(compiler) == TOKEN_LINE)
     {
       // If there's no expression after return, initializers should 
@@ -3234,10 +3252,22 @@ void statement(Compiler* compiler)
         error(compiler, "A constructor cannot return a value.");
       }
 
-      expression(compiler);
+      // support multiple return values
+      do
+      {
+        expression(compiler);
+        returnValues++;
+      } while (match(compiler, TOKEN_COMMA));
     }
 
-    emitOp(compiler, CODE_RETURN);
+    if (returnValues <= 1)
+    {
+      emitOp(compiler, CODE_RETURN);
+    }
+    else
+    {
+      emitByteArg(compiler, CODE_RETURN_MULTIPLE, returnValues);
+    }
   }
   else if (match(compiler, TOKEN_WHILE))
   {
@@ -3247,10 +3277,14 @@ void statement(Compiler* compiler)
   {
     // Block statement.
     pushScope(compiler);
-    if (finishBlock(compiler))
+    int returnValues = finishBlock(compiler);
+    if (returnValues > 0)
     {
-      // Block was an expression, so discard it.
-      emitOp(compiler, CODE_POP);
+      // Block was an expression, discard pushed values.
+      for (int i = 0; i < returnValues; i++)
+      {
+        emitOp(compiler, CODE_POP);
+      }
     }
     popScope(compiler);
   }
@@ -3699,26 +3733,60 @@ static void import(Compiler* compiler)
 // Compiles a "var" variable definition statement.
 static void variableDefinition(Compiler* compiler)
 {
-  // Grab its name, but don't declare it yet. A (local) variable shouldn't be
+  Token nameTokens[MAX_RETURN_VALUES];
+
+  // Grab all names, but don't declare them yet. A (local) variable shouldn't be
   // in scope in its own initializer.
-  consume(compiler, TOKEN_NAME, "Expect variable name.");
-  Token nameToken = compiler->parser->previous;
+  int numVars = 0;
+  do
+  {
+    if (numVars >= MAX_RETURN_VALUES) 
+    {
+      error(compiler, "Too many variable declarations, only %d supported.", MAX_RETURN_VALUES);
+      break;
+    }
+    consume(compiler, TOKEN_NAME, "Expect variable name.");
+    nameTokens[numVars] = compiler->parser->previous;
+    numVars++;
+  } while (match(compiler, TOKEN_COMMA));
 
   // Compile the initializer.
   if (match(compiler, TOKEN_EQ))
   {
     ignoreNewlines(compiler);
-    expression(compiler);
+    // support multiple assignments, these don't have to match nr of variables above
+    // because each expression can leave multiple values on the stack.
+    int values = 0;
+    do
+    {
+      expression(compiler);
+      if (++values > numVars) 
+      {
+        // we can now be sure that we have too many values
+        error(compiler, "Too many values in variable declaration, expect max %d.", numVars);
+        break;
+      }
+    } while (match(compiler, TOKEN_COMMA));
   }
   else
   {
-    // Default initialize it to null.
-    null(compiler, false);
+    // Default initialize to null.
+    for (int i = 0; i < numVars; i++)
+    {
+      null(compiler, false);
+    }
   }
 
-  // Now put it in scope.
-  int symbol = declareVariable(compiler, &nameToken);
-  defineVariable(compiler, symbol);
+  // Now put all in scope.
+  // Local variables are stored on the stack.
+  // Module variables are pop:ed from the stack.
+  bool localScope = compiler->scopeDepth >= 0;
+  for (int i = 0; i < numVars; i++)
+  {
+    int index = localScope ? i : numVars - 1 - i;
+    int symbol = declareVariable(compiler, &nameTokens[index]);
+    defineVariable(compiler, symbol);
+  }
 }
 
 // Compiles a "definition". These are the statements that bind new variables.

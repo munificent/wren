@@ -386,12 +386,13 @@ static void callForeign(WrenVM* vm, ObjFiber* fiber,
 {
   ASSERT(vm->apiStack == NULL, "Cannot already be in foreign call.");
   vm->apiStack = fiber->stackTop - numArgs;
+  vm->numForeignReturnValues = 1;
 
   foreign(vm);
 
   // Discard the stack slots for the arguments and temporaries but leave one
   // for the result.
-  fiber->stackTop = vm->apiStack + 1;
+  fiber->stackTop = vm->apiStack + vm->numForeignReturnValues;
 
   vm->apiStack = NULL;
 }
@@ -1214,13 +1215,12 @@ static WrenInterpretResult runInterpreter(WrenVM* vm, register ObjFiber* fiber)
 
     CASE_CODE(RETURN):
     {
-      Value result = POP();
-      fiber->numFrames--;
-
+    normalReturn:
       // Close any upvalues still in scope.
       closeUpvalues(fiber, stackStart);
 
       // If the fiber is complete, end it.
+      fiber->numFrames--;
       if (fiber->numFrames == 0)
       {
         // See if there's another fiber to return to. If not, we're done.
@@ -1228,30 +1228,58 @@ static WrenInterpretResult runInterpreter(WrenVM* vm, register ObjFiber* fiber)
         {
           // Store the final result value at the beginning of the stack so the
           // C API can get it.
-          fiber->stack[0] = result;
+          fiber->stack[0] = PEEK();
           fiber->stackTop = fiber->stack + 1;
           return WREN_RESULT_SUCCESS;
         }
-        
+
+        Value result = PEEK();
         ObjFiber* resumingFiber = fiber->caller;
         fiber->caller = NULL;
         fiber = resumingFiber;
         vm->fiber = resumingFiber;
-        
+
         // Store the result in the resuming fiber.
         fiber->stackTop[-1] = result;
       }
       else
       {
         // Store the result of the block in the first slot, which is where the
-        // caller expects it.
-        stackStart[0] = result;
+        // caller expects it. Use PEEK() since stackTop is written to in the 
+        // next statement.
+        frame->stackStart[0] = PEEK();
 
         // Discard the stack slots for the call frame (leaving one slot for the
         // result).
         fiber->stackTop = frame->stackStart + 1;
       }
-      
+
+      LOAD_FRAME();
+      DISPATCH();
+    }
+
+    CASE_CODE(RETURN_MULTIPLE):
+    {
+      if (fiber->numFrames == 1)
+      {
+        // Don't allow fiber exits with multiple return values
+        // (for performance reasons.)
+        READ_BYTE();
+        goto normalReturn;
+      }
+      fiber->numFrames--;
+
+      // Close any upvalues still in scope.
+      closeUpvalues(fiber, stackStart);
+
+      // Move return values on stack to be in correct place
+      const int numReturnValues = READ_BYTE();
+      for (int i = 0; i < numReturnValues; i++)
+      {
+        stackStart[i] = fiber->stackTop[i - numReturnValues];
+      }
+      fiber->stackTop = frame->stackStart + numReturnValues;
+
       LOAD_FRAME();
       DISPATCH();
     }
@@ -1990,4 +2018,10 @@ void* wrenGetUserData(WrenVM* vm)
 void wrenSetUserData(WrenVM* vm, void* userData)
 {
 	vm->config.userData = userData;
+}
+
+void wrenSetForeignReturnValues(WrenVM* vm, int num)
+{
+  ASSERT(num > 0, "Number of foreign return values must be zero or larger.");
+  vm->numForeignReturnValues = num;
 }

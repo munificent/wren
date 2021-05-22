@@ -106,6 +106,9 @@
 // is so that error messages mentioning variables can be stack allocated.
 #define MAX_VARIABLE_NAME 64
 
+// The maximum number of return values allowed from a method.
+#define MAX_RETURN_VALUES 8
+
 // The maximum number of fields a class can have, including inherited fields.
 // This is explicit in the bytecode since `CODE_CLASS` and `CODE_SUBCLASS` take
 // a single byte for the number of fields. Note that it's 255 and not 256
