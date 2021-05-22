@@ -159,7 +159,7 @@ static int dumpInstruction(WrenVM* vm, ObjFn* fn, int i, int* lastLine)
     {
       int slot = READ_SHORT();
       printf("%-16s %5d '%s'\n", "LOAD_MODULE_VAR", slot,
-             fn->module->variableNames.data[slot]->value);
+             fn->module->variableNames.buffer.data[slot]->value);
       break;
     }
 
@@ -167,7 +167,7 @@ static int dumpInstruction(WrenVM* vm, ObjFn* fn, int i, int* lastLine)
     {
       int slot = READ_SHORT();
       printf("%-16s %5d '%s'\n", "STORE_MODULE_VAR", slot,
-             fn->module->variableNames.data[slot]->value);
+             fn->module->variableNames.buffer.data[slot]->value);
       break;
     }
 
@@ -199,7 +199,7 @@ static int dumpInstruction(WrenVM* vm, ObjFn* fn, int i, int* lastLine)
       int numArgs = bytecode[i - 1] - CODE_CALL_0;
       int symbol = READ_SHORT();
       printf("CALL_%-11d %5d '%s'\n", numArgs, symbol,
-             vm->methodNames.data[symbol]->value);
+             vm->methodNames.buffer.data[symbol]->value);
       break;
     }
 
@@ -225,7 +225,7 @@ static int dumpInstruction(WrenVM* vm, ObjFn* fn, int i, int* lastLine)
       int symbol = READ_SHORT();
       int superclass = READ_SHORT();
       printf("SUPER_%-10d %5d '%s' %5d\n", numArgs, symbol,
-             vm->methodNames.data[symbol]->value, superclass);
+             vm->methodNames.buffer.data[symbol]->value, superclass);
       break;
     }
 
@@ -302,7 +302,7 @@ static int dumpInstruction(WrenVM* vm, ObjFn* fn, int i, int* lastLine)
     {
       int symbol = READ_SHORT();
       printf("%-16s %5d '%s'\n", "METHOD_INSTANCE", symbol,
-             vm->methodNames.data[symbol]->value);
+             vm->methodNames.buffer.data[symbol]->value);
       break;
     }
 
@@ -310,7 +310,7 @@ static int dumpInstruction(WrenVM* vm, ObjFn* fn, int i, int* lastLine)
     {
       int symbol = READ_SHORT();
       printf("%-16s %5d '%s'\n", "METHOD_STATIC", symbol,
-             vm->methodNames.data[symbol]->value);
+             vm->methodNames.buffer.data[symbol]->value);
       break;
     }
       

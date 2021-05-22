@@ -3,18 +3,31 @@
 #include "wren_utils.h"
 #include "wren_vm.h"
 
+#define SYMBOL_TABLE_FIND_THRESHOLD 15
+
 DEFINE_BUFFER(Byte, uint8_t);
 DEFINE_BUFFER(Int, int);
 DEFINE_BUFFER(String, ObjString*);
 
 void wrenSymbolTableInit(SymbolTable* symbols)
 {
-  wrenStringBufferInit(symbols);
+  wrenStringBufferInit(&symbols->buffer);
+  wrenIntBufferInit(&symbols->ordered);
 }
 
 void wrenSymbolTableClear(WrenVM* vm, SymbolTable* symbols)
 {
-  wrenStringBufferClear(vm, symbols);
+  wrenStringBufferClear(vm, &symbols->buffer);
+  wrenIntBufferClear(vm, &symbols->ordered);
+}
+
+static int wrenStringCompareCString(const ObjString* a,
+                                           const char* b, size_t length)
+{
+  int cmp = strncmp(a->value, b, length);
+
+  if (cmp != 0) return cmp;
+  return (int) a->length - (int) length;
 }
 
 int wrenSymbolTableAdd(WrenVM* vm, SymbolTable* symbols,
@@ -23,10 +36,21 @@ int wrenSymbolTableAdd(WrenVM* vm, SymbolTable* symbols,
   ObjString* symbol = AS_STRING(wrenNewStringLength(vm, name, length));
   
   wrenPushRoot(vm, &symbol->obj);
-  wrenStringBufferWrite(vm, symbols, symbol);
+  wrenStringBufferWrite(vm, &symbols->buffer, symbol);
   wrenPopRoot(vm);
-  
-  return symbols->count - 1;
+
+  int index = symbols->buffer.count - 1;
+  wrenIntBufferWrite(vm, &symbols->ordered, index);
+
+  int i = index - 1;
+
+  while (i >= 0 && wrenStringCompareCString(symbols->buffer.data[symbols->ordered.data[i]], name, length) > 0) {
+    symbols->ordered.data[i + 1] = symbols->ordered.data[i];
+    symbols->ordered.data[i] = index;
+    --i;
+  }
+
+  return index;
 }
 
 int wrenSymbolTableEnsure(WrenVM* vm, SymbolTable* symbols,
@@ -44,10 +68,41 @@ int wrenSymbolTableFind(const SymbolTable* symbols,
                         const char* name, size_t length)
 {
   // See if the symbol is already defined.
-  // TODO: O(n). Do something better.
-  for (int i = 0; i < symbols->count; i++)
+
+  if (symbols->buffer.count < SYMBOL_TABLE_FIND_THRESHOLD)
   {
-    if (wrenStringEqualsCString(symbols->data[i], name, length)) return i;
+    for (int i = 0; i < symbols->buffer.count; i++)
+    {
+      if (wrenStringEqualsCString(symbols->buffer.data[i], name, length)) return i;
+    }
+
+    return -1;
+  }
+
+  int lo = 0;
+  int hi = symbols->buffer.count;
+
+  while (lo < hi)
+  {
+    int mid = lo + (hi - lo) / 2;
+
+    ASSERT(mid < symbols->ordered.count, "");
+    ASSERT(symbols->ordered.data[mid] < symbols->buffer.count, "");
+
+    int cmp = wrenStringCompareCString(symbols->buffer.data[symbols->ordered.data[mid]], name, length);
+
+    if (cmp > 0)
+    {
+      hi = mid;
+    }
+    else if (cmp < 0)
+    {
+      lo = mid + 1;
+    }
+    else
+    {
+      return symbols->ordered.data[mid];
+    }
   }
 
   return -1;
@@ -55,13 +110,14 @@ int wrenSymbolTableFind(const SymbolTable* symbols,
 
 void wrenBlackenSymbolTable(WrenVM* vm, SymbolTable* symbolTable)
 {
-  for (int i = 0; i < symbolTable->count; i++)
+  for (int i = 0; i < symbolTable->buffer.count; i++)
   {
-    wrenGrayObj(vm, &symbolTable->data[i]->obj);
+    wrenGrayObj(vm, &symbolTable->buffer.data[i]->obj);
   }
   
   // Keep track of how much memory is still in use.
-  vm->bytesAllocated += symbolTable->capacity * sizeof(*symbolTable->data);
+  vm->bytesAllocated += symbolTable->buffer.capacity * sizeof(*symbolTable->buffer.data);
+  vm->bytesAllocated += symbolTable->ordered.capacity * sizeof(*symbolTable->ordered.data);
 }
 
 int wrenUtf8EncodeNumBytes(int value)

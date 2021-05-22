@@ -49,7 +49,7 @@ void metaGetModuleVariables(WrenVM* vm)
   }
     
   ObjModule* module = AS_MODULE(moduleValue);
-  ObjList* names = wrenNewList(vm, module->variableNames.count);
+  ObjList* names = wrenNewList(vm, module->variableNames.buffer.count);
   vm->apiStack[0] = OBJ_VAL(names);
 
   // Initialize the elements to null in case a collection happens when we
@@ -61,7 +61,7 @@ void metaGetModuleVariables(WrenVM* vm)
   
   for (int i = 0; i < names->elements.count; i++)
   {
-    names->elements.data[i] = OBJ_VAL(module->variableNames.data[i]);
+    names->elements.data[i] = OBJ_VAL(module->variableNames.buffer.data[i]);
   }
 }
 
