@@ -50,6 +50,7 @@
 // available in standard C++98.
 #define ERROR_MESSAGE_SIZE (80 + MAX_VARIABLE_NAME + 15)
 
+// CAUTION: if you change this, also update the rules[] below.
 typedef enum
 {
   TOKEN_LEFT_PAREN,
@@ -78,6 +79,7 @@ typedef enum
   TOKEN_AMPAMP,
   TOKEN_BANG,
   TOKEN_TILDE,
+  TOKEN_TILDETILDE,
   TOKEN_QUESTION,
   TOKEN_EQ,
   TOKEN_LT,
@@ -86,6 +88,7 @@ typedef enum
   TOKEN_GTEQ,
   TOKEN_EQEQ,
   TOKEN_BANGEQ,
+  TOKEN_BANGTILDE,
 
   TOKEN_BREAK,
   TOKEN_CONTINUE,
@@ -108,6 +111,7 @@ typedef enum
   TOKEN_TRUE,
   TOKEN_VAR,
   TOKEN_WHILE,
+  TOKEN_SWITCH,
 
   TOKEN_FIELD,
   TOKEN_STATIC_FIELD,
@@ -620,6 +624,7 @@ static Keyword keywords[] =
   {"true",      4, TOKEN_TRUE},
   {"var",       3, TOKEN_VAR},
   {"while",     5, TOKEN_WHILE},
+  {"switch",    6, TOKEN_SWITCH},
   {NULL,        0, TOKEN_EOF} // Sentinel to mark the end of the array.
 };
 
@@ -1109,13 +1114,27 @@ static void nextToken(Parser* parser)
       case '^': makeToken(parser, TOKEN_CARET); return;
       case '+': makeToken(parser, TOKEN_PLUS); return;
       case '-': makeToken(parser, TOKEN_MINUS); return;
-      case '~': makeToken(parser, TOKEN_TILDE); return;
+      case '~': twoCharToken(parser, '~', TOKEN_TILDETILDE, TOKEN_TILDE); return;
       case '?': makeToken(parser, TOKEN_QUESTION); return;
         
       case '|': twoCharToken(parser, '|', TOKEN_PIPEPIPE, TOKEN_PIPE); return;
       case '&': twoCharToken(parser, '&', TOKEN_AMPAMP, TOKEN_AMP); return;
       case '=': twoCharToken(parser, '=', TOKEN_EQEQ, TOKEN_EQ); return;
-      case '!': twoCharToken(parser, '=', TOKEN_BANGEQ, TOKEN_BANG); return;
+
+      case '!':
+        if (matchChar(parser, '='))
+        {
+          makeToken(parser, TOKEN_BANGEQ);
+        }
+        else if (matchChar(parser, '~'))
+        {
+          makeToken(parser, TOKEN_BANGTILDE);
+        }
+        else
+        {
+          makeToken(parser, TOKEN_BANG);
+        }
+        return;
         
       case '.':
         if (matchChar(parser, '.'))
@@ -1716,7 +1735,7 @@ typedef enum
   PREC_CONDITIONAL,   // ?:
   PREC_LOGICAL_OR,    // ||
   PREC_LOGICAL_AND,   // &&
-  PREC_EQUALITY,      // == !=
+  PREC_EQUALITY,      // == != ~~ !~
   PREC_IS,            // is
   PREC_COMPARISON,    // < > <= >=
   PREC_BITWISE_OR,    // |
@@ -1999,6 +2018,31 @@ static void callMethod(Compiler* compiler, int numArgs, const char* name,
   emitShortArg(compiler, (Code)(CODE_CALL_0 + numArgs), symbol);
 }
 
+// Compiles a function literal in braces.  [name] and [nameLength] are the
+// name the function will be given.
+static void functionLiteral(Compiler* compiler,
+                            const char* name, int nameLength)
+{
+    Compiler fnCompiler;
+    initCompiler(&fnCompiler, compiler->parser, compiler, false);
+
+    // Make a dummy signature to track the arity.
+    Signature fnSignature = { "", 0, SIG_METHOD, 0 };
+
+    // Parse the parameter list, if any.
+    if (match(compiler, TOKEN_PIPE))
+    {
+      finishParameterList(&fnCompiler, &fnSignature);
+      consume(compiler, TOKEN_PIPE, "Expect '|' after function parameters.");
+    }
+
+    fnCompiler.fn->arity = fnSignature.arity;
+
+    finishBody(&fnCompiler);
+
+    endCompiler(&fnCompiler, name, nameLength);
+}
+
 // Compiles an (optional) argument list for a method call with [methodSignature]
 // and then calls it.
 static void methodCall(Compiler* compiler, Code instruction,
@@ -2031,30 +2075,13 @@ static void methodCall(Compiler* compiler, Code instruction,
     called.type = SIG_METHOD;
     called.arity++;
 
-    Compiler fnCompiler;
-    initCompiler(&fnCompiler, compiler->parser, compiler, false);
-
-    // Make a dummy signature to track the arity.
-    Signature fnSignature = { "", 0, SIG_METHOD, 0 };
-
-    // Parse the parameter list, if any.
-    if (match(compiler, TOKEN_PIPE))
-    {
-      finishParameterList(&fnCompiler, &fnSignature);
-      consume(compiler, TOKEN_PIPE, "Expect '|' after function parameters.");
-    }
-
-    fnCompiler.fn->arity = fnSignature.arity;
-
-    finishBody(&fnCompiler);
-
     // Name the function based on the method its passed to.
-    char blockName[MAX_METHOD_SIGNATURE + 15];
+    char blockName[MAX_METHOD_SIGNATURE + 16];
     int blockLength;
     signatureToString(&called, blockName, &blockLength);
     memmove(blockName + blockLength, " block argument", 16);
 
-    endCompiler(&fnCompiler, blockName, blockLength + 15);
+    functionLiteral(compiler, blockName, blockLength + 15);
   }
 
   // TODO: Allow Grace-style mixfix methods?
@@ -2590,6 +2617,11 @@ void infixOp(Compiler* compiler, bool canAssign)
   // Compile the right-hand side.
   parsePrecedence(compiler, (Precedence)(rule->precedence + 1));
 
+  if (rule->name[1] == '~') // smartmatch
+  {
+    emitOp(compiler, CODE_SWAP);
+  }
+
   // Call the operator method on the left-hand side.
   Signature signature = { rule->name, (int)strlen(rule->name), SIG_METHOD, 1 };
   callSignature(compiler, CODE_CALL_0, &signature);
@@ -2746,6 +2778,7 @@ void constructorSignature(Compiler* compiler, Signature* signature)
 #define PREFIX_OPERATOR(name)      { unaryOp, NULL, unarySignature, PREC_NONE, name }
 #define OPERATOR(name)             { unaryOp, infixOp, mixedSignature, PREC_TERM, name }
 
+// CAUTION: if you change this, also update the TokenType enum above.
 GrammarRule rules[] =
 {
   /* TOKEN_LEFT_PAREN    */ PREFIX(grouping),
@@ -2774,6 +2807,7 @@ GrammarRule rules[] =
   /* TOKEN_AMPAMP        */ INFIX(PREC_LOGICAL_AND, and_),
   /* TOKEN_BANG          */ PREFIX_OPERATOR("!"),
   /* TOKEN_TILDE         */ PREFIX_OPERATOR("~"),
+  /* TOKEN_TILDETILDE    */ INFIX_OPERATOR(PREC_EQUALITY, "~~"),
   /* TOKEN_QUESTION      */ INFIX(PREC_ASSIGNMENT, conditional),
   /* TOKEN_EQ            */ UNUSED,
   /* TOKEN_LT            */ INFIX_OPERATOR(PREC_COMPARISON, "<"),
@@ -2782,6 +2816,7 @@ GrammarRule rules[] =
   /* TOKEN_GTEQ          */ INFIX_OPERATOR(PREC_COMPARISON, ">="),
   /* TOKEN_EQEQ          */ INFIX_OPERATOR(PREC_EQUALITY, "=="),
   /* TOKEN_BANGEQ        */ INFIX_OPERATOR(PREC_EQUALITY, "!="),
+  /* TOKEN_BANGTILDE     */ INFIX_OPERATOR(PREC_EQUALITY, "!~"),
   /* TOKEN_BREAK         */ UNUSED,
   /* TOKEN_CONTINUE      */ UNUSED,
   /* TOKEN_CLASS         */ UNUSED,
@@ -2803,6 +2838,7 @@ GrammarRule rules[] =
   /* TOKEN_TRUE          */ PREFIX(boolean),
   /* TOKEN_VAR           */ UNUSED,
   /* TOKEN_WHILE         */ UNUSED,
+  /* TOKEN_SWITCH        */ UNUSED,
   /* TOKEN_FIELD         */ PREFIX(field),
   /* TOKEN_STATIC_FIELD  */ PREFIX(staticField),
   /* TOKEN_NAME          */ { name, NULL, namedSignature, PREC_NONE, NULL },
@@ -2869,6 +2905,7 @@ static int getByteCountForArguments(const uint8_t* bytecode,
     case CODE_FALSE:
     case CODE_TRUE:
     case CODE_POP:
+    case CODE_DUP:
     case CODE_CLOSE_UPVALUE:
     case CODE_RETURN:
     case CODE_END:
@@ -2886,6 +2923,7 @@ static int getByteCountForArguments(const uint8_t* bytecode,
     case CODE_FOREIGN_CLASS:
     case CODE_END_MODULE:
     case CODE_END_CLASS:
+    case CODE_SWAP:
       return 0;
 
     case CODE_LOAD_LOCAL:
@@ -3166,6 +3204,82 @@ static void whileStatement(Compiler* compiler)
   endLoop(compiler);
 }
 
+// Switch: a series of (topic ~~ test) conditions
+static void switchStatement(Compiler* compiler)
+{
+  Signature smartmatch = { "~~", 2, SIG_METHOD, 1 };
+  IntBuffer cases;
+  wrenIntBufferInit(&cases);
+
+  // Compile the topic expresssion
+  consume(compiler, TOKEN_LEFT_PAREN, "Expect '(' after 'switch'.");
+  expression(compiler);
+  consume(compiler, TOKEN_RIGHT_PAREN, "Expect ')' after switch topic.");
+  consume(compiler, TOKEN_LEFT_BRACE, "Expect '{' after switch topic.");
+  consumeLine(compiler, "Expect newline after '{' starting switch statement.");
+
+  while (!compiler->parser->hasError)
+  {
+    if (match(compiler, TOKEN_ELSE))
+    {
+      // optional colon after `else` for ergonomics
+      match(compiler, TOKEN_COLON);
+
+      statement(compiler);
+      consumeLine(compiler, "Expect newline after switch case.");
+      break;
+    }
+
+    if (peek(compiler) == TOKEN_RIGHT_BRACE)
+    {
+      break;
+    }
+
+    // Normal case: emit topic ~~ test
+    emitOp(compiler, CODE_DUP);   // copy the topic's value
+    if (match(compiler, TOKEN_LEFT_BRACE))
+    {
+      if (peek(compiler) != TOKEN_PIPE)
+      {
+        error(compiler, "Hash literals are not allowed in switch cases.  Please use a list of the hash keys instead.");
+      }
+
+      functionLiteral(compiler, "switch test", 11); // 11 = string length
+    }
+    else
+    {
+      expression(compiler);
+    }
+    emitOp(compiler, CODE_SWAP);  // smartmatch: make the test the invocant
+    callSignature(compiler, CODE_CALL_0, &smartmatch);
+
+    consume(compiler, TOKEN_COLON, "Expect ':' after switch expression.");
+
+    // Jump to the next case if the condition is false.
+    int nextCaseJump = emitJump(compiler, CODE_JUMP_IF);
+    statement(compiler);
+
+    // jump past the rest of the cases
+    int toEndJump = emitJump(compiler, CODE_JUMP);
+    wrenIntBufferWrite(compiler->parser->vm, &cases, toEndJump);
+
+    patchJump(compiler, nextCaseJump);
+
+    consumeLine(compiler, "Expect newline after switch case.");
+  }
+
+  // Point all the end-of-case jumps here
+  for (int i=0; i<cases.count; ++i)
+  {
+    patchJump(compiler, cases.data[i]);
+  }
+
+  emitOp(compiler, CODE_POP);     // Remove the original topic value
+  consume(compiler, TOKEN_RIGHT_BRACE, "Expect '}' after switch body.");
+
+  wrenIntBufferClear(compiler->parser->vm, &cases);
+}
+
 // Compiles a simple statement. These can only appear at the top-level or
 // within curly blocks. Simple statements exclude variable binding statements
 // like "var" and "class" which are not allowed directly in places like the
@@ -3242,6 +3356,10 @@ void statement(Compiler* compiler)
   else if (match(compiler, TOKEN_WHILE))
   {
     whileStatement(compiler);
+  }
+  else if (match(compiler, TOKEN_SWITCH))
+  {
+    switchStatement(compiler);
   }
   else if (match(compiler, TOKEN_LEFT_BRACE))
   {

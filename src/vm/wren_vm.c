@@ -950,6 +950,12 @@ static WrenInterpretResult runInterpreter(WrenVM* vm, register ObjFiber* fiber)
     }
 
     CASE_CODE(POP):   DROP(); DISPATCH();
+    CASE_CODE(DUP):
+    {
+      Value value = PEEK();
+      PUSH(value); DISPATCH();
+    }
+
     CASE_CODE(NULL):  PUSH(NULL_VAL); DISPATCH();
     CASE_CODE(FALSE): PUSH(FALSE_VAL); DISPATCH();
     CASE_CODE(TRUE):  PUSH(TRUE_VAL); DISPATCH();
@@ -1371,6 +1377,14 @@ static WrenInterpretResult runInterpreter(WrenVM* vm, register ObjFiber* fiber)
       if (wrenHasError(fiber)) RUNTIME_ERROR();
 
       PUSH(result);
+      DISPATCH();
+    }
+
+    CASE_CODE(SWAP):
+    {
+      Value temp = PEEK2();
+      PEEK2() = PEEK();
+      PEEK() = temp;
       DISPATCH();
     }
 

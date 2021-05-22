@@ -77,6 +77,9 @@ OPCODE(STORE_FIELD, -1)
 // Pop and discard the top of stack.
 OPCODE(POP, -1)
 
+// Push a copy of the value currently on the top of the stack.
+OPCODE(DUP, 1)
+
 // Invoke the method with symbol [arg]. The number indicates the number of
 // arguments (not including the receiver).
 OPCODE(CALL_0, 0)
@@ -211,6 +214,9 @@ OPCODE(IMPORT_MODULE, 1)
 // variable to import is at [arg] in the constant table. Pushes the loaded
 // variable's value.
 OPCODE(IMPORT_VARIABLE, 1)
+
+// Swap the top two stack slots.
+OPCODE(SWAP, 0)
 
 // This pseudo-instruction indicates the end of the bytecode. It should
 // always be preceded by a `CODE_RETURN`, so is never actually executed.

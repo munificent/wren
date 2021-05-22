@@ -1,6 +1,8 @@
 class Bool {}
 class Fiber {}
-class Fn {}
+class Fn {
+  !~(arg) { !(arg ~~ this) }
+}
 class Null {}
 class Num {}
 
@@ -28,6 +30,12 @@ class Sequence {
       if (element == item) return true
     }
     return false
+  }
+
+  ~~(element) { contains(element) }
+
+  !~(element) {
+    return !contains(element)
   }
 
   count {
@@ -181,9 +189,20 @@ class WhereSequence is Sequence {
   iteratorValue(iterator) { _sequence.iteratorValue(iterator) }
 }
 
+class SeqMatchIfContains {
+  construct new(seq) {
+    _seq = seq
+  }
+
+  ~~(needle) { _seq.contains(needle) }
+  !~(needle) { !_seq.contains(needle) }
+}
+
 class String is Sequence {
   bytes { StringByteSequence.new(this) }
   codePoints { StringCodePointSequence.new(this) }
+
+  part { SeqMatchIfContains.new(this) }
 
   split(delimiter) {
     if (!(delimiter is String) || delimiter.isEmpty) {
