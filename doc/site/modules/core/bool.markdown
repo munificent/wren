@@ -15,6 +15,6 @@ System.print(!true) //> false
 System.print(!false) //> true
 </pre>
 
-### toString
+### **toString**
 
 The string representation of the value, either `"true"` or `"false"`.
