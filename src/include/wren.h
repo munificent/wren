@@ -58,7 +58,7 @@ typedef struct WrenHandle WrenHandle;
 typedef void* (*WrenReallocateFn)(void* memory, size_t newSize, void* userData);
 
 // A function callable from Wren code, but implemented in C.
-typedef void (*WrenForeignMethodFn)(WrenVM* vm);
+typedef void (*WrenForeignMethodFn)(WrenVM* vm, void *userData);
 
 // A finalizer function for freeing resources owned by an instance of a foreign
 // class. Unlike most foreign methods, finalizers do not have access to the VM
@@ -93,9 +93,19 @@ typedef struct WrenLoadModuleResult
 // Loads and returns the source code for the module [name].
 typedef WrenLoadModuleResult (*WrenLoadModuleFn)(WrenVM* vm, const char* name);
 
-// Returns a pointer to a foreign method on [className] in [module] with
-// [signature].
-typedef WrenForeignMethodFn (*WrenBindForeignMethodFn)(WrenVM* vm,
+// The result of a bindForeignMethodFn call.
+// [executeFn] is the function to call.
+// [userData] is passed to [executeFn].  The caller is responsible for making
+// sure [userData] is still valid whenever Wren calls [executeFn].
+typedef struct WrenBindForeignMethodResult {
+  WrenForeignMethodFn executeFn;
+  void* userData;
+} WrenBindForeignMethodResult;
+
+// Returns a foreign method and userdata on [className] in [module]
+// with [isStatic]/[signature].  If the method is not found, the returned
+// WrenBindForeignMethodResult.executeFn == NULL.
+typedef WrenBindForeignMethodResult (*WrenBindForeignMethodFn)(WrenVM* vm,
     const char* module, const char* className, bool isStatic,
     const char* signature);
 

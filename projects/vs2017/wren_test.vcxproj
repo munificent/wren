@@ -55,7 +55,8 @@
     <IgnoreWarnCompileDuplicatedFilename>true</IgnoreWarnCompileDuplicatedFilename>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>wren_test</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.18362.0</WindowsTargetPlatformVersion>
+    <LatestTargetPlatformVersion>$([Microsoft.Build.Utilities.ToolLocationHelper]::GetLatestSDKTargetPlatformVersion('Windows', '10.0'))</LatestTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>$(LatestTargetPlatformVersion)</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release 64bit|x64'" Label="Configuration">
@@ -262,6 +263,7 @@
     <ClInclude Include="..\..\test\api\call_wren_call_root.h" />
     <ClInclude Include="..\..\test\api\error.h" />
     <ClInclude Include="..\..\test\api\foreign_class.h" />
+    <ClInclude Include="..\..\test\api\foreign_method_user_data.h" />
     <ClInclude Include="..\..\test\api\get_variable.h" />
     <ClInclude Include="..\..\test\api\handle.h" />
     <ClInclude Include="..\..\test\api\lists.h" />
@@ -282,6 +284,7 @@
     <ClCompile Include="..\..\test\api\call_wren_call_root.c" />
     <ClCompile Include="..\..\test\api\error.c" />
     <ClCompile Include="..\..\test\api\foreign_class.c" />
+    <ClCompile Include="..\..\test\api\foreign_method_user_data.c" />
     <ClCompile Include="..\..\test\api\get_variable.c" />
     <ClCompile Include="..\..\test\api\handle.c" />
     <ClCompile Include="..\..\test\api\lists.c" />

@@ -2,7 +2,7 @@
 
 #include "lists.h"
 
-static void newList(WrenVM* vm)
+static void newList(WrenVM* vm, void *userData)
 {
   wrenSetSlotNewList(vm, 0);
 }
@@ -23,7 +23,7 @@ static void appendNumber(WrenVM* vm, double value)
   wrenInsertInList(vm, 0, -1, 1);
 }
 
-static void insert(WrenVM* vm)
+static void insert(WrenVM* vm, void *userData)
 {
   wrenSetSlotNewList(vm, 0);
 
@@ -45,7 +45,7 @@ static void insert(WrenVM* vm)
   insertNumber(vm, -3, 9.0);
 }
 
-static void get(WrenVM* vm)
+static void get(WrenVM* vm, void *userData)
 {
   int listSlot = 1;
   int index = (int)wrenGetSlotDouble(vm, 2);
@@ -53,7 +53,7 @@ static void get(WrenVM* vm)
   wrenGetListElement(vm, listSlot, index, 0);
 }
 
-static void set(WrenVM* vm)
+static void set(WrenVM* vm, void *userData)
 {
   wrenSetSlotNewList(vm, 0);
 

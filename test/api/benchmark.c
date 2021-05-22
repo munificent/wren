@@ -3,7 +3,7 @@
 
 #include "benchmark.h"
 
-static void arguments(WrenVM* vm)
+static void arguments(WrenVM* vm, void *userData)
 {
   double result = 0;
 
@@ -20,7 +20,7 @@ const char* testScript =
 "  static method(a, b, c, d) { a + b + c + d }\n"
 "}\n";
 
-static void call(WrenVM* vm)
+static void call(WrenVM* vm, void *userData)
 {
   int iterations = (int)wrenGetSlotDouble(vm, 1);
 

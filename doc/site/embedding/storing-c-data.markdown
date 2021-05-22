@@ -309,33 +309,48 @@ handle. The host tells the VM how to find them by giving Wren a pointer to this
 function:
 
 <pre class="snippet" data-lang="c">
-WrenForeignMethodFn bindForeignMethod(WrenVM* vm, const char* module,
+WrenBindForeignMethodResult bindForeignMethod(WrenVM* vm, const char* module,
     const char* className, bool isStatic, const char* signature)
 {
+  WrenBindForeignMethodResult result = {};
+  result.executeFn = NULL;  // no function unless we find a match below.
+
   if (strcmp(className, "File") == 0)
   {
     if (!isStatic && strcmp(signature, "write(_)") == 0)
     {
-      return fileWrite;
+      result.executeFn = fileWrite;
     }
 
     if (!isStatic && strcmp(signature, "close()") == 0)
     {
-      return fileClose;
+      result.executeFn = fileClose;
     }
   }
 
-  // Unknown method.
-  return NULL;
+  return result;
 }
 </pre>
 
 When Wren calls this, we look at the class and method name to figure out which
-method it's binding, and then return a pointer to the appropriate function. The
-foreign method for writing to the file is:
+method it's binding, and then return a pointer to the appropriate function.
+That pointer is wrapped in a `WrenBindForeignMethodResult`:
 
 <pre class="snippet" data-lang="c">
-void fileWrite(WrenVM* vm)
+typedef struct WrenBindForeignMethodResult {
+  WrenForeignMethodFn executeFn;
+  void* userData;
+} WrenBindForeignMethodResult;
+</pre>
+
+Along with the function, we can give Wren a `userData` value it will pass to
+the foreign method.  We don't do that here, but the space is available if we
+need it.
+
+The foreign method for writing to the file is:
+
+<pre class="snippet" data-lang="c">
+void fileWrite(WrenVM* vm, void* userData)
 {
   FILE** file = (FILE**)wrenGetSlotForeign(vm, 0);
 
@@ -364,7 +379,7 @@ they already closed. If not, we call `fwrite()` to write to the file.
 The other method is `close()` to let them explicitly close the file:
 
 <pre class="snippet" data-lang="c">
-void fileClose(WrenVM* vm)
+void fileClose(WrenVM* vm, void *userData)
 {
   FILE** file = (FILE**)wrenGetSlotForeign(vm, 0);
   closeFile(file);

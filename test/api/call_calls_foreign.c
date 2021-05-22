@@ -3,7 +3,7 @@
 
 #include "wren.h"
 
-static void api(WrenVM *vm) {
+static void api(WrenVM *vm, void *userData) {
   // Grow the slot array. This should trigger the stack to be moved.
   wrenEnsureSlots(vm, 10);
   wrenSetSlotNewList(vm, 0);

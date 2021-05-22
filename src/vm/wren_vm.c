@@ -304,38 +304,38 @@ static void closeUpvalues(ObjFiber* fiber, Value* last)
 //
 // This will try the host's foreign method binder first. If that fails, it
 // falls back to handling the built-in modules.
-static WrenForeignMethodFn findForeignMethod(WrenVM* vm,
+static WrenBindForeignMethodResult findForeignMethod(WrenVM* vm,
                                              const char* moduleName,
                                              const char* className,
                                              bool isStatic,
                                              const char* signature)
 {
-  WrenForeignMethodFn method = NULL;
+  WrenBindForeignMethodResult result = {0};
   
   if (vm->config.bindForeignMethodFn != NULL)
   {
-    method = vm->config.bindForeignMethodFn(vm, moduleName, className, isStatic,
+    result = vm->config.bindForeignMethodFn(vm, moduleName, className, isStatic,
                                             signature);
   }
   
   // If the host didn't provide it, see if it's an optional one.
-  if (method == NULL)
+  if (result.executeFn == NULL)
   {
 #if WREN_OPT_META
     if (strcmp(moduleName, "meta") == 0)
     {
-      method = wrenMetaBindForeignMethod(vm, className, isStatic, signature);
+      result = wrenMetaBindForeignMethod(vm, className, isStatic, signature);
     }
 #endif
 #if WREN_OPT_RANDOM
     if (strcmp(moduleName, "random") == 0)
     {
-      method = wrenRandomBindForeignMethod(vm, className, isStatic, signature);
+      result = wrenRandomBindForeignMethod(vm, className, isStatic, signature);
     }
 #endif
   }
 
-  return method;
+  return result;
 }
 
 // Defines [methodValue] as a method on [classObj].
@@ -352,22 +352,29 @@ static void bindMethod(WrenVM* vm, int methodType, int symbol,
   if (methodType == CODE_METHOD_STATIC) classObj = classObj->obj.classObj;
 
   Method method;
+  WrenUserData userData = WREN_USER_DATA_NONE;
+
   if (IS_STRING(methodValue))
   {
     const char* name = AS_CSTRING(methodValue);
+    WrenBindForeignMethodResult foreignMethod = {0};
+
     method.type = METHOD_FOREIGN;
-    method.as.foreign = findForeignMethod(vm, module->name->value,
+    foreignMethod = findForeignMethod(vm, module->name->value,
                                           className,
                                           methodType == CODE_METHOD_STATIC,
                                           name);
 
-    if (method.as.foreign == NULL)
+    if (foreignMethod.executeFn == NULL)
     {
       vm->fiber->error = wrenStringFormat(vm,
           "Could not find foreign method '@' for class $ in module '$'.",
           methodValue, classObj->name->value, module->name->value);
       return;
     }
+
+    method.as.foreign = foreignMethod.executeFn;
+    userData = foreignMethod.userData;
   }
   else
   {
@@ -378,16 +385,17 @@ static void bindMethod(WrenVM* vm, int methodType, int symbol,
     wrenBindMethodCode(classObj, method.as.closure->fn);
   }
 
-  wrenBindMethod(vm, classObj, symbol, method);
+  wrenBindMethod(vm, classObj, symbol, method, userData);
 }
 
 static void callForeign(WrenVM* vm, ObjFiber* fiber,
-                        WrenForeignMethodFn foreign, int numArgs)
+                        WrenForeignMethodFn foreign,
+                        int numArgs, void *userData)
 {
   ASSERT(vm->apiStack == NULL, "Cannot already be in foreign call.");
   vm->apiStack = fiber->stackTop - numArgs;
 
-  foreign(vm);
+  foreign(vm, userData);
 
   // Discard the stack slots for the arguments and temporaries but leave one
   // for the result.
@@ -587,6 +595,7 @@ static void bindForeignClass(WrenVM* vm, ObjClass* classObj, ObjModule* module)
   
   Method method;
   method.type = METHOD_FOREIGN;
+  WrenUserData userData = WREN_USER_DATA_NONE;
 
   // Add the symbol even if there is no allocator so we can ensure that the
   // symbol itself is always in the symbol table.
@@ -594,7 +603,7 @@ static void bindForeignClass(WrenVM* vm, ObjClass* classObj, ObjModule* module)
   if (methods.allocate != NULL)
   {
     method.as.foreign = methods.allocate;
-    wrenBindMethod(vm, classObj, symbol, method);
+    wrenBindMethod(vm, classObj, symbol, method, userData);
   }
   
   // Add the symbol even if there is no finalizer so we can ensure that the
@@ -603,7 +612,7 @@ static void bindForeignClass(WrenVM* vm, ObjClass* classObj, ObjModule* module)
   if (methods.finalize != NULL)
   {
     method.as.foreign = (WrenForeignMethodFn)methods.finalize;
-    wrenBindMethod(vm, classObj, symbol, method);
+    wrenBindMethod(vm, classObj, symbol, method, userData);
   }
 }
 
@@ -666,13 +675,14 @@ static void createForeign(WrenVM* vm, ObjFiber* fiber, Value* stack)
 
   ASSERT(classObj->methods.count > symbol, "Class should have allocator.");
   Method* method = &classObj->methods.data[symbol];
+  WrenUserData userData = WREN_USER_DATA_NONE;
   ASSERT(method->type == METHOD_FOREIGN, "Allocator should be foreign.");
 
   // Pass the constructor arguments to the allocator as well.
   ASSERT(vm->apiStack == NULL, "Cannot already be in foreign call.");
   vm->apiStack = stack;
 
-  method->as.foreign(vm);
+  method->as.foreign(vm, userData);
 
   vm->apiStack = NULL;
 }
@@ -1074,7 +1084,8 @@ static WrenInterpretResult runInterpreter(WrenVM* vm, register ObjFiber* fiber)
           break;
 
         case METHOD_FOREIGN:
-          callForeign(vm, fiber, method->as.foreign, numArgs);
+          callForeign(vm, fiber, method->as.foreign, numArgs,
+              classObj->foreignMethodUserDatas.data[symbol].userData);
           if (wrenHasError(fiber)) RUNTIME_ERROR();
           break;
 

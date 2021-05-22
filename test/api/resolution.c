@@ -65,7 +65,7 @@ static void runTestVM(WrenVM* vm, WrenConfiguration* configuration,
   wrenFreeVM(otherVM);
 }
 
-static void noResolver(WrenVM* vm)
+static void noResolver(WrenVM* vm, void *userData)
 {
   WrenConfiguration configuration;
   wrenInitConfiguration(&configuration);
@@ -86,7 +86,7 @@ static const char* resolveToNull(WrenVM* vm, const char* importer,
   return NULL;
 }
 
-static void returnsNull(WrenVM* vm)
+static void returnsNull(WrenVM* vm, void *userData)
 {
   WrenConfiguration configuration;
   wrenInitConfiguration(&configuration);
@@ -114,7 +114,7 @@ static const char* resolveChange(WrenVM* vm, const char* importer,
   return result;
 }
 
-static void changesString(WrenVM* vm)
+static void changesString(WrenVM* vm, void *userData)
 {
   WrenConfiguration configuration;
   wrenInitConfiguration(&configuration);
@@ -123,7 +123,7 @@ static void changesString(WrenVM* vm)
   runTestVM(vm, &configuration, "import \"foo|bar\"");
 }
 
-static void shared(WrenVM* vm)
+static void shared(WrenVM* vm, void *userData)
 {
   WrenConfiguration configuration;
   wrenInitConfiguration(&configuration);
@@ -132,7 +132,7 @@ static void shared(WrenVM* vm)
   runTestVM(vm, &configuration, "import \"foo|bar\"\nimport \"foo/bar\"");
 }
 
-static void importer(WrenVM* vm)
+static void importer(WrenVM* vm, void *userData)
 {
   WrenConfiguration configuration;
   wrenInitConfiguration(&configuration);
