@@ -623,10 +623,23 @@ static Keyword keywords[] =
   {NULL,        0, TOKEN_EOF} // Sentinel to mark the end of the array.
 };
 
+
 // Returns true if [c] is a valid (non-initial) identifier character.
-static bool isName(char c)
+static bool isAsciiName(uint8_t c)
 {
   return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_';
+}
+
+// Adds Utf8 support the traditional Ascii only identifiers
+// Assume is a valid Utf8 character if it fits in the valid range
+static bool isUtf8Name(int c)
+{
+  return isAsciiName(c) || (c > 0x7f && c <= 0x10ffff);
+}
+
+static bool isName(uint8_t c)
+{
+  return isUtf8Name(c);
 }
 
 // Returns true if [c] is a digit.
