@@ -98,7 +98,7 @@ WrenVM* wrenNewVM(WrenConfiguration* config)
 
 void wrenFreeVM(WrenVM* vm)
 {
-  ASSERT(vm->methodNames.count > 0, "VM appears to have already been freed.");
+  ASSERT(vm->methodNames.objs.count > 0, "VM appears to have already been freed.");
   
   // Free all of the GC objects.
   Obj* obj = vm->first;
@@ -438,7 +438,7 @@ static void runtimeError(WrenVM* vm)
 static void methodNotFound(WrenVM* vm, ObjClass* classObj, int symbol)
 {
   vm->fiber->error = wrenStringFormat(vm, "@ does not implement '$'.",
-      OBJ_VAL(classObj->name), vm->methodNames.data[symbol]->value);
+      OBJ_VAL(classObj->name), vm->methodNames.objs.data[symbol]->value);
 }
 
 // Looks up the previously loaded module with [name].
@@ -475,8 +475,8 @@ static ObjClosure* compileInModule(WrenVM* vm, Value name, const char* source,
     for (int i = 0; i < coreModule->variables.count; i++)
     {
       wrenDefineVariable(vm, module,
-                         coreModule->variableNames.data[i]->value,
-                         coreModule->variableNames.data[i]->length,
+                         coreModule->variableNames.objs.data[i]->value,
+                         coreModule->variableNames.objs.data[i]->length,
                          coreModule->variables.data[i], NULL);
     }
   }

@@ -3615,7 +3615,7 @@ static void classDefinition(Compiler* compiler, bool isForeign)
   if (!isForeign)
   {
     compiler->fn->code.data[numFieldsInstruction] =
-        (uint8_t)classInfo.fields.count;
+        (uint8_t)classInfo.fields.objs.count;
   }
   
   // Clear symbol tables for tracking field and method names.
@@ -3830,8 +3830,8 @@ ObjFn* wrenCompile(WrenVM* vm, ObjModule* module, const char* source,
     {
       // Synthesize a token for the original use site.
       parser.previous.type = TOKEN_NAME;
-      parser.previous.start = parser.module->variableNames.data[i]->value;
-      parser.previous.length = parser.module->variableNames.data[i]->length;
+      parser.previous.start = parser.module->variableNames.objs.data[i]->value;
+      parser.previous.length = parser.module->variableNames.objs.data[i]->length;
       parser.previous.line = (int)AS_NUM(parser.module->variables.data[i]);
       error(&compiler, "Variable is used but not defined.");
     }
