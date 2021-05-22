@@ -3,7 +3,7 @@
 
 #include "error.h"
 
-static void runtimeError(WrenVM* vm)
+static void runtimeError(WrenVM* vm, void *userData)
 {
   wrenEnsureSlots(vm, 1);
   wrenSetSlotString(vm, 0, "Error!");

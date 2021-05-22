@@ -37,13 +37,13 @@ static uint32_t advanceState(Well512* well)
   return well->state[well->index];
 }
 
-static void randomAllocate(WrenVM* vm)
+static void randomAllocate(WrenVM* vm, void* userData)
 {
   Well512* well = (Well512*)wrenSetSlotNewForeign(vm, 0, 0, sizeof(Well512));
   well->index = 0;
 }
 
-static void randomSeed0(WrenVM* vm)
+static void randomSeed0(WrenVM* vm, void* userData)
 {
   Well512* well = (Well512*)wrenGetSlotForeign(vm, 0);
 
@@ -54,7 +54,7 @@ static void randomSeed0(WrenVM* vm)
   }
 }
 
-static void randomSeed1(WrenVM* vm)
+static void randomSeed1(WrenVM* vm, void* userData)
 {
   Well512* well = (Well512*)wrenGetSlotForeign(vm, 0);
 
@@ -65,7 +65,7 @@ static void randomSeed1(WrenVM* vm)
   }
 }
 
-static void randomSeed16(WrenVM* vm)
+static void randomSeed16(WrenVM* vm, void* userData)
 {
   Well512* well = (Well512*)wrenGetSlotForeign(vm, 0);
 
@@ -75,7 +75,7 @@ static void randomSeed16(WrenVM* vm)
   }
 }
 
-static void randomFloat(WrenVM* vm)
+static void randomFloat(WrenVM* vm, void* userData)
 {
   Well512* well = (Well512*)wrenGetSlotForeign(vm, 0);
 
@@ -95,7 +95,7 @@ static void randomFloat(WrenVM* vm)
   wrenSetSlotDouble(vm, 0, result);
 }
 
-static void randomInt0(WrenVM* vm)
+static void randomInt0(WrenVM* vm, void* userData)
 {
   Well512* well = (Well512*)wrenGetSlotForeign(vm, 0);
 
@@ -112,33 +112,33 @@ WrenForeignClassMethods wrenRandomBindForeignClass(WrenVM* vm,
                                                    const char* className)
 {
   ASSERT(strcmp(className, "Random") == 0, "Should be in Random class.");
-  WrenForeignClassMethods methods;
+  WrenForeignClassMethods methods = {0};
   methods.allocate = randomAllocate;
-  methods.finalize = NULL;
   return methods;
 }
 
-WrenForeignMethodFn wrenRandomBindForeignMethod(WrenVM* vm,
+WrenBindForeignMethodResult wrenRandomBindForeignMethod(WrenVM* vm,
                                                 const char* className,
                                                 bool isStatic,
                                                 const char* signature)
 {
+  WrenBindForeignMethodResult result = {0};
   ASSERT(strcmp(className, "Random") == 0, "Should be in Random class.");
-  
-  if (strcmp(signature, "<allocate>") == 0) return randomAllocate;
-  if (strcmp(signature, "seed_()") == 0) return randomSeed0;
-  if (strcmp(signature, "seed_(_)") == 0) return randomSeed1;
-  
-  if (strcmp(signature, "seed_(_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_)") == 0)
+
+  if (strcmp(signature, "<allocate>") == 0) result.executeFn = randomAllocate;
+  else if (strcmp(signature, "seed_()") == 0) result.executeFn = randomSeed0;
+  else if (strcmp(signature, "seed_(_)") == 0) result.executeFn = randomSeed1;
+
+  else if (strcmp(signature, "seed_(_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_)") == 0)
   {
-    return randomSeed16;
+    result.executeFn =  randomSeed16;
   }
-  
-  if (strcmp(signature, "float()") == 0) return randomFloat;
-  if (strcmp(signature, "int()") == 0) return randomInt0;
-  
-  ASSERT(false, "Unknown method.");
-  return NULL;
+
+  else if (strcmp(signature, "float()") == 0) result.executeFn = randomFloat;
+  else if (strcmp(signature, "int()") == 0) result.executeFn = randomInt0;
+
+  ASSERT(result.executeFn != NULL, "Unknown method.");
+  return result;
 }
 
 #endif

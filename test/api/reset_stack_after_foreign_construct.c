@@ -3,7 +3,7 @@
 
 #include "wren.h"
 
-static void counterAllocate(WrenVM* vm)
+static void counterAllocate(WrenVM* vm, void *userData)
 {
   double* counter = (double*)wrenSetSlotNewForeign(vm, 0, 0, sizeof(double));
   *counter = wrenGetSlotDouble(vm, 1);

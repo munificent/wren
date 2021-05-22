@@ -58,13 +58,14 @@ typedef struct WrenHandle WrenHandle;
 typedef void* (*WrenReallocateFn)(void* memory, size_t newSize, void* userData);
 
 // A function callable from Wren code, but implemented in C.
-typedef void (*WrenForeignMethodFn)(WrenVM* vm);
+typedef void (*WrenForeignMethodFn)(WrenVM* vm, void *userData);
 
 // A finalizer function for freeing resources owned by an instance of a foreign
 // class. Unlike most foreign methods, finalizers do not have access to the VM
 // and should not interact with it since it's in the middle of a garbage
 // collection.
-typedef void (*WrenFinalizerFn)(void* data);
+// [userData] is from WrenForeignClassMethods.
+typedef void (*WrenFinalizerFn)(void* data, void *userData);
 
 // Gives the host a chance to canonicalize the imported module name,
 // potentially taking into account the (previously resolved) name of the module
@@ -93,9 +94,19 @@ typedef struct WrenLoadModuleResult
 // Loads and returns the source code for the module [name].
 typedef WrenLoadModuleResult (*WrenLoadModuleFn)(WrenVM* vm, const char* name);
 
-// Returns a pointer to a foreign method on [className] in [module] with
-// [signature].
-typedef WrenForeignMethodFn (*WrenBindForeignMethodFn)(WrenVM* vm,
+// The result of a bindForeignMethodFn call.
+// [executeFn] is the function to call.
+// [userData] is passed to [executeFn].  The caller is responsible for making
+// sure [userData] is still valid whenever Wren calls [executeFn].
+typedef struct WrenBindForeignMethodResult {
+  WrenForeignMethodFn executeFn;
+  void* userData;
+} WrenBindForeignMethodResult;
+
+// Returns a foreign method and userdata on [className] in [module]
+// with [isStatic]/[signature].  If the method is not found, the returned
+// WrenBindForeignMethodResult.executeFn == NULL.
+typedef WrenBindForeignMethodResult (*WrenBindForeignMethodFn)(WrenVM* vm,
     const char* module, const char* className, bool isStatic,
     const char* signature);
 
@@ -138,11 +149,18 @@ typedef struct
   // [wrenSetSlotNewForeign()] exactly once.
   WrenForeignMethodFn allocate;
 
+  // value passed to [allocate] as userData
+  void* allocateUserData;
+
   // The callback invoked when the garbage collector is about to collect a
   // foreign object's memory.
   //
   // This may be `NULL` if the foreign class does not need to finalize.
   WrenFinalizerFn finalize;
+
+  // value passed to [finalize] as userData
+  void* finalizeUserData;
+
 } WrenForeignClassMethods;
 
 // Returns a pair of pointers to the foreign methods used to allocate and

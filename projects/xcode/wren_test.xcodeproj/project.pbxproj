@@ -19,6 +19,7 @@
 		78667B8C71CC7CFE6567D9CC /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = 6E0F7DF4115B07262C2BD434 /* main.c */; };
 		7CCD7163EDF01255A3B6BFA3 /* api_tests.c in Sources */ = {isa = PBXBuildFile; fileRef = 21B810EB49F2C99D318E572B /* api_tests.c */; };
 		8F510F77A173C5697A74FDB7 /* reset_stack_after_foreign_construct.c in Sources */ = {isa = PBXBuildFile; fileRef = 310165BFD4689371EB9E4BFF /* reset_stack_after_foreign_construct.c */; };
+		9CF140F7AEA880E924166F37 /* foreign_class_user_data.c in Sources */ = {isa = PBXBuildFile; fileRef = F5A7933F69900AF18BDDB97F /* foreign_class_user_data.c */; };
 		A9B950DFD94B1FD1B4585F1F /* error.c in Sources */ = {isa = PBXBuildFile; fileRef = F961FEA79C5025592B7604E7 /* error.c */; };
 		AA2E14D19E2D5E4323187311 /* call_calls_foreign.c in Sources */ = {isa = PBXBuildFile; fileRef = 93074179D71B12ABCAEC97B9 /* call_calls_foreign.c */; };
 		BD0CC4E181C21B533630C321 /* reset_stack_after_call_abort.c in Sources */ = {isa = PBXBuildFile; fileRef = B1B12E89FA506CBB1D7C24C9 /* reset_stack_after_call_abort.c */; };
@@ -26,6 +27,7 @@
 		DA534BB5CB4AB9A7374E39F5 /* call_wren_call_root.c in Sources */ = {isa = PBXBuildFile; fileRef = F9C7671D92144CCFC05B4D5D /* call_wren_call_root.c */; };
 		DAAEBD7B4BD15E6D01980BBB /* user_data.c in Sources */ = {isa = PBXBuildFile; fileRef = B0175F83D8521835BFEDA5C3 /* user_data.c */; };
 		E21864B54F40732750D362F5 /* get_variable.c in Sources */ = {isa = PBXBuildFile; fileRef = 1270B31D5FD3A94FD5F2A95D /* get_variable.c */; };
+		E2ED09ED3F740E5FC816C82D /* foreign_method_user_data.c in Sources */ = {isa = PBXBuildFile; fileRef = FF2EF4D50F142107FB87AB15 /* foreign_method_user_data.c */; };
 		F97FE7C03DCE8D327FF5C600 /* libwren.a in Frameworks */ = {isa = PBXBuildFile; fileRef = F5D0B9A8179C66DA54518FE8 /* libwren.a */; };
 /* End PBXBuildFile section */
 
@@ -52,6 +54,7 @@
 		1270B31D5FD3A94FD5F2A95D /* get_variable.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = get_variable.c; path = ../../test/api/get_variable.c; sourceTree = "<group>"; };
 		13133647AB601BF9D9A71C87 /* call_wren_call_root.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = call_wren_call_root.h; path = ../../test/api/call_wren_call_root.h; sourceTree = "<group>"; };
 		17B63BDB49AF868DC38EC21B /* foreign_class.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = foreign_class.h; path = ../../test/api/foreign_class.h; sourceTree = "<group>"; };
+		1B272CE98F0FA49BB15D5329 /* foreign_class_user_data.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = foreign_class_user_data.h; path = ../../test/api/foreign_class_user_data.h; sourceTree = "<group>"; };
 		21B810EB49F2C99D318E572B /* api_tests.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = api_tests.c; path = ../../test/api/api_tests.c; sourceTree = "<group>"; };
 		2CA1DDD554DC96873C782415 /* api_tests.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = api_tests.h; path = ../../test/api/api_tests.h; sourceTree = "<group>"; };
 		2F776B0B32E83D3DB454E14B /* call.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = call.c; path = ../../test/api/call.c; sourceTree = "<group>"; };
@@ -81,11 +84,14 @@
 		B1B12E89FA506CBB1D7C24C9 /* reset_stack_after_call_abort.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = reset_stack_after_call_abort.c; path = ../../test/api/reset_stack_after_call_abort.c; sourceTree = "<group>"; };
 		BB012C6DE33BE51FCAD772AD /* user_data.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = user_data.h; path = ../../test/api/user_data.h; sourceTree = "<group>"; };
 		C22EBF6BD9415A9DC95D55AB /* new_vm.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = new_vm.c; path = ../../test/api/new_vm.c; sourceTree = "<group>"; };
+		C952731FD9379F51C5AB295F /* foreign_method_user_data.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = foreign_method_user_data.h; path = ../../test/api/foreign_method_user_data.h; sourceTree = "<group>"; };
 		DA66CE78FC327BAA38E7A4B8 /* libwren.a */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = "wren.xcodeproj"; path = wren.xcodeproj; sourceTree = SOURCE_ROOT; };
 		E97890032D8C6135215DE643 /* call_calls_foreign.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = call_calls_foreign.h; path = ../../test/api/call_calls_foreign.h; sourceTree = "<group>"; };
+		F5A7933F69900AF18BDDB97F /* foreign_class_user_data.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = foreign_class_user_data.c; path = ../../test/api/foreign_class_user_data.c; sourceTree = "<group>"; };
 		F6806111996E87C328946751 /* error.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = error.h; path = ../../test/api/error.h; sourceTree = "<group>"; };
 		F961FEA79C5025592B7604E7 /* error.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = error.c; path = ../../test/api/error.c; sourceTree = "<group>"; };
 		F9C7671D92144CCFC05B4D5D /* call_wren_call_root.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = call_wren_call_root.c; path = ../../test/api/call_wren_call_root.c; sourceTree = "<group>"; };
+		FF2EF4D50F142107FB87AB15 /* foreign_method_user_data.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = foreign_method_user_data.c; path = ../../test/api/foreign_method_user_data.c; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -125,6 +131,10 @@
 				F6806111996E87C328946751 /* error.h */,
 				8A4FC471BC490F2336284AB1 /* foreign_class.c */,
 				17B63BDB49AF868DC38EC21B /* foreign_class.h */,
+				F5A7933F69900AF18BDDB97F /* foreign_class_user_data.c */,
+				1B272CE98F0FA49BB15D5329 /* foreign_class_user_data.h */,
+				FF2EF4D50F142107FB87AB15 /* foreign_method_user_data.c */,
+				C952731FD9379F51C5AB295F /* foreign_method_user_data.h */,
 				1270B31D5FD3A94FD5F2A95D /* get_variable.c */,
 				7428A1E7C18B981937AA9827 /* get_variable.h */,
 				069BFCEB1DAE981D0DCA932B /* handle.c */,
@@ -261,6 +271,8 @@
 				DA534BB5CB4AB9A7374E39F5 /* call_wren_call_root.c in Sources */,
 				A9B950DFD94B1FD1B4585F1F /* error.c in Sources */,
 				181D16496F82893B2190A489 /* foreign_class.c in Sources */,
+				9CF140F7AEA880E924166F37 /* foreign_class_user_data.c in Sources */,
+				E2ED09ED3F740E5FC816C82D /* foreign_method_user_data.c in Sources */,
 				E21864B54F40732750D362F5 /* get_variable.c in Sources */,
 				4D8AE463A8CC37D57C2682A3 /* handle.c in Sources */,
 				1C5491694BE6605B26F39FA9 /* lists.c in Sources */,

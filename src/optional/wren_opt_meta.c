@@ -7,7 +7,7 @@
 #include "wren_vm.h"
 #include "wren_opt_meta.wren.inc"
 
-void metaCompile(WrenVM* vm)
+void metaCompile(WrenVM* vm, void* userData)
 {
   const char* source = wrenGetSlotString(vm, 1);
   bool isExpression = wrenGetSlotBool(vm, 2);
@@ -37,7 +37,7 @@ void metaCompile(WrenVM* vm)
   }
 }
 
-void metaGetModuleVariables(WrenVM* vm)
+void metaGetModuleVariables(WrenVM* vm, void* userData)
 {
   wrenEnsureSlots(vm, 3);
   
@@ -70,27 +70,29 @@ const char* wrenMetaSource()
   return metaModuleSource;
 }
 
-WrenForeignMethodFn wrenMetaBindForeignMethod(WrenVM* vm,
+WrenBindForeignMethodResult wrenMetaBindForeignMethod(WrenVM* vm,
                                               const char* className,
                                               bool isStatic,
                                               const char* signature)
 {
+  WrenBindForeignMethodResult result = {0};
+
   // There is only one foreign method in the meta module.
   ASSERT(strcmp(className, "Meta") == 0, "Should be in Meta class.");
   ASSERT(isStatic, "Should be static.");
-  
+
   if (strcmp(signature, "compile_(_,_,_)") == 0)
   {
-    return metaCompile;
+    result.executeFn = metaCompile;
   }
-  
-  if (strcmp(signature, "getModuleVariables_(_)") == 0)
+
+  else if (strcmp(signature, "getModuleVariables_(_)") == 0)
   {
-    return metaGetModuleVariables;
+    result.executeFn = metaGetModuleVariables;
   }
-  
-  ASSERT(false, "Unknown method.");
-  return NULL;
+
+  ASSERT(result.executeFn != NULL, "Unknown method.");
+  return result;
 }
 
 #endif

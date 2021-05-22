@@ -27,6 +27,12 @@
     <ClInclude Include="..\..\test\api\foreign_class.h">
       <Filter>api</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\test\api\foreign_class_user_data.h">
+      <Filter>api</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\test\api\foreign_method_user_data.h">
+      <Filter>api</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\test\api\get_variable.h">
       <Filter>api</Filter>
     </ClInclude>
@@ -79,6 +85,12 @@
       <Filter>api</Filter>
     </ClCompile>
     <ClCompile Include="..\..\test\api\foreign_class.c">
+      <Filter>api</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\test\api\foreign_class_user_data.c">
+      <Filter>api</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\test\api\foreign_method_user_data.c">
       <Filter>api</Filter>
     </ClCompile>
     <ClCompile Include="..\..\test\api\get_variable.c">

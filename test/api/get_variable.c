@@ -2,22 +2,22 @@
 
 #include "get_variable.h"
 
-static void beforeDefined(WrenVM* vm)
+static void beforeDefined(WrenVM* vm, void *userData)
 {
   wrenGetVariable(vm, "./test/api/get_variable", "A", 0);
 }
 
-static void afterDefined(WrenVM* vm)
+static void afterDefined(WrenVM* vm, void *userData)
 {
   wrenGetVariable(vm, "./test/api/get_variable", "A", 0);
 }
 
-static void afterAssigned(WrenVM* vm)
+static void afterAssigned(WrenVM* vm, void *userData)
 {
   wrenGetVariable(vm, "./test/api/get_variable", "A", 0);
 }
 
-static void otherSlot(WrenVM* vm)
+static void otherSlot(WrenVM* vm, void *userData)
 {
   wrenEnsureSlots(vm, 3);
   wrenGetVariable(vm, "./test/api/get_variable", "B", 2);
@@ -27,12 +27,12 @@ static void otherSlot(WrenVM* vm)
   wrenSetSlotString(vm, 0, string);
 }
 
-static void otherModule(WrenVM* vm)
+static void otherModule(WrenVM* vm, void *userData)
 {
   wrenGetVariable(vm, "./test/api/get_variable_module", "Variable", 0);
 }
 
-static void hasVariable(WrenVM* vm)
+static void hasVariable(WrenVM* vm, void *userData)
 {
   const char* module = wrenGetSlotString(vm, 1);
   const char* variable = wrenGetSlotString(vm, 2);
@@ -42,7 +42,7 @@ static void hasVariable(WrenVM* vm)
   wrenSetSlotBool(vm, 0, result);
 }
 
-static void hasModule(WrenVM* vm)
+static void hasModule(WrenVM* vm, void *userData)
 {
   const char* module = wrenGetSlotString(vm, 1);
 

@@ -2,11 +2,19 @@
 
 static const char* testName = NULL;
 
-WrenForeignMethodFn APITest_bindForeignMethod(
+WrenBindForeignMethodResult APITest_bindForeignMethod(
     WrenVM* vm, const char* module, const char* className,
     bool isStatic, const char* signature)
 {
-  if (strncmp(module, "./test/", 7) != 0) return NULL;
+#define RETURN_IF_NONNULL(m) \
+  do { if (method != NULL) { \
+    result.executeFn = method; \
+    return result; \
+  } } while(0)
+
+  WrenBindForeignMethodResult result = {0};
+
+  if (strncmp(module, "./test/", 7) != 0) return result;
 
   // For convenience, concatenate all of the method qualifiers into a single
   // signature string.
@@ -20,54 +28,66 @@ WrenForeignMethodFn APITest_bindForeignMethod(
   WrenForeignMethodFn method = NULL;
 
   method = benchmarkBindMethod(fullName);
-  if (method != NULL) return method;
+  RETURN_IF_NONNULL(method);
 
   method = callCallsForeignBindMethod(fullName);
-  if (method != NULL) return method;
+  RETURN_IF_NONNULL(method);
 
   method = errorBindMethod(fullName);
-  if (method != NULL) return method;
+  RETURN_IF_NONNULL(method);
 
   method = getVariableBindMethod(fullName);
-  if (method != NULL) return method;
+  RETURN_IF_NONNULL(method);
 
   method = foreignClassBindMethod(fullName);
-  if (method != NULL) return method;
+  RETURN_IF_NONNULL(method);
 
   method = handleBindMethod(fullName);
-  if (method != NULL) return method;
+  RETURN_IF_NONNULL(method);
 
   method = listsBindMethod(fullName);
-  if (method != NULL) return method;
+  RETURN_IF_NONNULL(method);
 
   method = mapsBindMethod(fullName);
-  if (method != NULL) return method;
+  RETURN_IF_NONNULL(method);
 
   method = newVMBindMethod(fullName);
-  if (method != NULL) return method;
+  RETURN_IF_NONNULL(method);
 
   method = resolutionBindMethod(fullName);
-  if (method != NULL) return method;
+  RETURN_IF_NONNULL(method);
 
   method = slotsBindMethod(fullName);
-  if (method != NULL) return method;
+  RETURN_IF_NONNULL(method);
 
   method = userDataBindMethod(fullName);
-  if (method != NULL) return method;
+  RETURN_IF_NONNULL(method);
+
+  method = foreignClassUserDataBindMethod(fullName);
+  RETURN_IF_NONNULL(method);
+
+  result = foreignMethodUserDataBindMethod(fullName);
+  if(result.executeFn != NULL) {
+    return result;
+  }
 
   fprintf(stderr,
       "Unknown foreign method '%s' for test '%s'\n", fullName, testName);
   exit(1);
-  return NULL;
+  return result;
+#undef RETURN_IF_NONNULL
 }
 
 WrenForeignClassMethods APITest_bindForeignClass(
     WrenVM* vm, const char* module, const char* className)
 {
-  WrenForeignClassMethods methods = { NULL, NULL };
+  WrenForeignClassMethods methods = { 0 };
   if (strncmp(module, "./test/api", 7) != 0) return methods;
 
   foreignClassBindClass(className, &methods);
+  if (methods.allocate != NULL) return methods;
+
+  foreignClassUserDataBindClass(className, &methods);
   if (methods.allocate != NULL) return methods;
 
   resetStackAfterForeignConstructBindClass(className, &methods);

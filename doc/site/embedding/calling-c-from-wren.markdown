@@ -46,7 +46,7 @@ It's the binding function your app uses to *look up* foreign methods.
 Its signature is:
 
 <pre class="snippet" data-lang="c">
-WrenForeignMethodFn bindForeignMethodFn(
+WrenBindForeignMethodResult bindForeignMethodFn(
     WrenVM* vm,
     const char* module,
     const char* className,
@@ -68,26 +68,30 @@ appropriate function for the given foreign method and returns a pointer to it.
 Something like:
 
 <pre class="snippet" data-lang="c">
-WrenForeignMethodFn bindForeignMethod(
+WrenBindForeignMethodResult bindForeignMethod(
     WrenVM* vm,
     const char* module,
     const char* className,
     bool isStatic,
     const char* signature)
 {
+  WrenBindForeignMethodResult result = {};
+  result.executeFn = NULL;  // no function unless we find a match below.
+
   if (strcmp(module, "main") == 0)
   {
     if (strcmp(className, "Math") == 0)
     {
       if (isStatic && strcmp(signature, "add(_,_)") == 0)
       {
-        return mathAdd; // C function for Math.add(_,_).
+        result.executeFn = mathAdd; // C function for Math.add(_,_).
       }
       // Other foreign methods on Math...
     }
     // Other classes in main...
   }
   // Other modules...
+  return result;
 }
 </pre>
 
@@ -99,12 +103,16 @@ foreign method. Wren does this binding step *once* when the class definition is
 first executed. It then keeps the function pointer you return and associates it
 with that method. This way, *calls* to the foreign method are fast.
 
+The `WrenBindForeignMethodResult` structure also has a `userData` member.
+We can provide any value we want, and Wren will give us that value back
+when calling our foreign-method function.
+
 ## Implementing a Foreign Method
 
 All C functions for foreign methods have the same signature:
 
 <pre class="snippet" data-lang="c">
-void foreignMethod(WrenVM* vm);
+void foreignMethod(WrenVM* vm, void *userData);
 </pre>
 
 Arguments passed from Wren are not passed as C arguments, and the method's
@@ -122,7 +130,7 @@ want to in C. If you want the foreign method to return a value, place it in slot
 zero. Like so:
 
 <pre class="snippet" data-lang="c">
-void mathAdd(WrenVM* vm)
+void mathAdd(WrenVM* vm, void *userData)
 {
   double a = wrenGetSlotDouble(vm, 1);
   double b = wrenGetSlotDouble(vm, 2);

@@ -4,12 +4,12 @@
 
 static WrenHandle* handle;
 
-static void setValue(WrenVM* vm)
+static void setValue(WrenVM* vm, void *userData)
 {
   handle = wrenGetSlotHandle(vm, 1);
 }
 
-static void getValue(WrenVM* vm)
+static void getValue(WrenVM* vm, void *userData)
 {
   wrenSetSlotHandle(vm, 0, handle);
   wrenReleaseHandle(vm, handle);

@@ -262,6 +262,8 @@
     <ClInclude Include="..\..\test\api\call_wren_call_root.h" />
     <ClInclude Include="..\..\test\api\error.h" />
     <ClInclude Include="..\..\test\api\foreign_class.h" />
+    <ClInclude Include="..\..\test\api\foreign_class_user_data.h" />
+    <ClInclude Include="..\..\test\api\foreign_method_user_data.h" />
     <ClInclude Include="..\..\test\api\get_variable.h" />
     <ClInclude Include="..\..\test\api\handle.h" />
     <ClInclude Include="..\..\test\api\lists.h" />
@@ -282,6 +284,8 @@
     <ClCompile Include="..\..\test\api\call_wren_call_root.c" />
     <ClCompile Include="..\..\test\api\error.c" />
     <ClCompile Include="..\..\test\api\foreign_class.c" />
+    <ClCompile Include="..\..\test\api\foreign_class_user_data.c" />
+    <ClCompile Include="..\..\test\api\foreign_method_user_data.c" />
     <ClCompile Include="..\..\test\api\get_variable.c" />
     <ClCompile Include="..\..\test\api\handle.c" />
     <ClCompile Include="..\..\test\api\lists.c" />

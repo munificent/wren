@@ -17,7 +17,7 @@ void* testReallocateFn(void* ptr, size_t newSize, void* userData) {
   return realloc(ptr, newSize);
 }
 
-static void test(WrenVM* vm)
+static void test(WrenVM* vm, void *userData)
 {
   WrenConfiguration configuration;
   wrenInitConfiguration(&configuration);

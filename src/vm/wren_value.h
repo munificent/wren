@@ -86,6 +86,13 @@
 // time based on the size of the character array (-1 for the terminating '\0').
 #define CONST_STRING(vm, text) wrenNewStringLength((vm), (text), sizeof(text) - 1)
 
+// The type of userData values from the embedding application.
+// It must be possible to typecast from 0 to WrenUserData.
+typedef void* WrenUserData;
+
+// The default value
+#define WREN_USER_DATA_NONE ((WrenUserData)0)
+
 // Identifies which specific type a heap-allocated object is.
 typedef enum {
   OBJ_CLASS,
@@ -382,12 +389,25 @@ typedef struct
   union
   {
     Primitive primitive;
+
+    // Note: the userData for foreign methods is stored separately, in a
+    // ForeignMethodUserData.  This way primitives and closures don't incur
+    // the space hit of the userData.
     WrenForeignMethodFn foreign;
+
     ObjClosure* closure;
   } as;
 } Method;
 
 DECLARE_BUFFER(Method, Method);
+
+// Struct wrapper for consistency with the other uses of Buffers.
+typedef struct
+{
+  WrenUserData userData;
+} ForeignMethodUserData;
+
+DECLARE_BUFFER(ForeignMethodUserData, ForeignMethodUserData);
 
 struct sObjClass
 {
@@ -413,6 +433,16 @@ struct sObjClass
   
   // The ClassAttribute for the class, if any
   Value attributes;
+
+  // Userdata for foreign methods.  This will be empty if the class has
+  // no foreign methods.
+  //
+  // Note: this is separate from [struct Method] because of
+  // benchmark results (see #971).
+  //
+  // Invariant: if methods.data[i].type == METHOD_FOREIGN, then
+  // foreignMethodUserDatas.data[i].userData is readable.
+  ForeignMethodUserDataBuffer foreignMethodUserDatas;
 };
 
 typedef struct
@@ -631,7 +661,10 @@ void wrenBindSuperclass(WrenVM* vm, ObjClass* subclass, ObjClass* superclass);
 ObjClass* wrenNewClass(WrenVM* vm, ObjClass* superclass, int numFields,
                        ObjString* name);
 
-void wrenBindMethod(WrenVM* vm, ObjClass* classObj, int symbol, Method method);
+// Add [method] as the [symbol]'th method of [classObj].  If [method]
+// is a foreign method, also save [userData].
+void wrenBindMethod(WrenVM* vm, ObjClass* classObj, int symbol, Method method,
+                    WrenUserData userData);
 
 // Creates a new closure object that invokes [fn]. Allocates room for its
 // upvalues, but assumes outside code will populate it.
@@ -647,7 +680,7 @@ static inline void wrenAppendCallFrame(WrenVM* vm, ObjFiber* fiber,
 {
   // The caller should have ensured we already have enough capacity.
   ASSERT(fiber->frameCapacity > fiber->numFrames, "No memory for call frame.");
-  
+
   CallFrame* frame = &fiber->frames[fiber->numFrames++];
   frame->stackStart = stackStart;
   frame->closure = closure;

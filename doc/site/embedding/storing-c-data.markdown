@@ -52,7 +52,9 @@ structs:
 typedef struct
 {
   WrenForeignMethodFn allocate;
+  void* allocateUserData;
   WrenFinalizerFn finalize;
+  void* finalizeUserData;
 } WrenForeignClassMethods;
 </pre>
 
@@ -62,8 +64,11 @@ whenever an instance of the foreign class is created. (We'll get to the optional
 foreign method:
 
 <pre class="snippet" data-lang="c">
-void allocate(WrenVM* vm);
+void allocate(WrenVM* vm, void *userData);
 </pre>
+
+When calling `allocate`, Wren fills in `userData` with the `allocateUserData`
+from the `WrenForeignClassMethods` structure.
 
 ## Initializing an Instance
 
@@ -172,12 +177,14 @@ running could leave Wren in a weird state.
 Instead, the finalize callback's signature is only:
 
 <pre class="snippet" data-lang="c">
-void finalize(void* data);
+void finalize(void* data, void *userData);
 </pre>
 
-Wren gives you the pointer to your foreign function's memory, and that's it. The
-*only* thing you should do inside a finalizer is release any external resources
-referenced by that memory.
+Wren gives you the pointer to your foreign instance's memory, and no other
+access to anything in Wren. The *only* thing you should do inside a finalizer
+is release any external resources referenced by that memory.  Wren does give
+you the `finalizeUserData` from the `WrenForeignClassMethods` struct,
+in case you need to control how your finalizer behaves.
 
 ## A Full Example
 
@@ -231,7 +238,7 @@ itself:
 WrenForeignClassMethods bindForeignClass(
     WrenVM* vm, const char* module, const char* className)
 {
-  WrenForeignClassMethods methods;
+  WrenForeignClassMethods methods = {0};
 
   if (strcmp(className, "File") == 0)
   {
@@ -256,7 +263,7 @@ and finalize functions the VM should call. Allocation looks like:
 #include &lt;stdio.h>
 #include "wren.h"
 
-void fileAllocate(WrenVM* vm)
+void fileAllocate(WrenVM* vm, void *userData)
 {
   FILE** file = (FILE**)wrenSetSlotNewForeign(vm,
       0, 0, sizeof(FILE*));
@@ -280,7 +287,7 @@ The finalizer simply casts the foreign instance's data back to the proper type
 and closes the file:
 
 <pre class="snippet" data-lang="c">
-void fileFinalize(void* data)
+void fileFinalize(void* data, void *userData)
 {
   closeFile((FILE**) data);
 }
@@ -309,33 +316,48 @@ handle. The host tells the VM how to find them by giving Wren a pointer to this
 function:
 
 <pre class="snippet" data-lang="c">
-WrenForeignMethodFn bindForeignMethod(WrenVM* vm, const char* module,
+WrenBindForeignMethodResult bindForeignMethod(WrenVM* vm, const char* module,
     const char* className, bool isStatic, const char* signature)
 {
+  WrenBindForeignMethodResult result = {};
+  result.executeFn = NULL;  // no function unless we find a match below.
+
   if (strcmp(className, "File") == 0)
   {
     if (!isStatic && strcmp(signature, "write(_)") == 0)
     {
-      return fileWrite;
+      result.executeFn = fileWrite;
     }
 
     if (!isStatic && strcmp(signature, "close()") == 0)
     {
-      return fileClose;
+      result.executeFn = fileClose;
     }
   }
 
-  // Unknown method.
-  return NULL;
+  return result;
 }
 </pre>
 
 When Wren calls this, we look at the class and method name to figure out which
-method it's binding, and then return a pointer to the appropriate function. The
-foreign method for writing to the file is:
+method it's binding, and then return a pointer to the appropriate function.
+That pointer is wrapped in a `WrenBindForeignMethodResult`:
 
 <pre class="snippet" data-lang="c">
-void fileWrite(WrenVM* vm)
+typedef struct WrenBindForeignMethodResult {
+  WrenForeignMethodFn executeFn;
+  void* userData;
+} WrenBindForeignMethodResult;
+</pre>
+
+Along with the function, we can give Wren a `userData` value it will pass to
+the foreign method.  We don't do that here, but the space is available if we
+need it.
+
+The foreign method for writing to the file is:
+
+<pre class="snippet" data-lang="c">
+void fileWrite(WrenVM* vm, void* userData)
 {
   FILE** file = (FILE**)wrenGetSlotForeign(vm, 0);
 
@@ -364,7 +386,7 @@ they already closed. If not, we call `fwrite()` to write to the file.
 The other method is `close()` to let them explicitly close the file:
 
 <pre class="snippet" data-lang="c">
-void fileClose(WrenVM* vm)
+void fileClose(WrenVM* vm, void *userData)
 {
   FILE** file = (FILE**)wrenGetSlotForeign(vm, 0);
   closeFile(file);

@@ -2,7 +2,7 @@
 
 #include "new_vm.h"
 
-static void nullConfig(WrenVM* vm)
+static void nullConfig(WrenVM* vm, void *userData)
 {
   WrenVM* otherVM = wrenNewVM(NULL);
 
@@ -13,7 +13,7 @@ static void nullConfig(WrenVM* vm)
   wrenFreeVM(otherVM);
 }
 
-static void multipleInterpretCalls(WrenVM* vm)
+static void multipleInterpretCalls(WrenVM* vm, void *userData)
 {
   WrenVM* otherVM = wrenNewVM(NULL);
   WrenInterpretResult result;

@@ -2,12 +2,12 @@
 
 #include "maps.h"
 
-static void newMap(WrenVM* vm)
+static void newMap(WrenVM* vm, void *userData)
 {
   wrenSetSlotNewMap(vm, 0);
 }
 
-static void invalidInsert(WrenVM* vm)
+static void invalidInsert(WrenVM* vm, void *userData)
 {
   wrenSetSlotNewMap(vm, 0);
   
@@ -17,7 +17,7 @@ static void invalidInsert(WrenVM* vm)
   wrenSetMapValue(vm, 0, 1, 2); // expect this to cause errors
 }
 
-static void insert(WrenVM* vm)
+static void insert(WrenVM* vm, void *userData)
 {
   wrenSetSlotNewMap(vm, 0);
   
@@ -49,7 +49,7 @@ static void insert(WrenVM* vm)
   wrenSetMapValue(vm, 0, 1, 2);
 }
 
-static void removeKey(WrenVM* vm)
+static void removeKey(WrenVM* vm, void *userData)
 {
   wrenEnsureSlots(vm, 3);
 
@@ -57,29 +57,29 @@ static void removeKey(WrenVM* vm)
   wrenRemoveMapValue(vm, 1, 2, 0);
 }
 
-static void countWren(WrenVM* vm)
+static void countWren(WrenVM* vm, void *userData)
 {
   int count = wrenGetMapCount(vm, 1);
   wrenSetSlotDouble(vm, 0, count);
 }
 
-static void countAPI(WrenVM* vm)
+static void countAPI(WrenVM* vm, void *userData)
 {
-  insert(vm);
+  insert(vm, userData);
   int count = wrenGetMapCount(vm, 0);
   wrenSetSlotDouble(vm, 0, count);
 }
 
-static void containsWren(WrenVM* vm)
+static void containsWren(WrenVM* vm, void *userData)
 {
   bool result = wrenGetMapContainsKey(vm, 1, 2);
   wrenSetSlotBool(vm, 0, result);
 }
 
 
-static void containsAPI(WrenVM* vm)
+static void containsAPI(WrenVM* vm, void *userData)
 {
-  insert(vm);
+  insert(vm, userData);
   
   wrenEnsureSlots(vm, 1);
   wrenSetSlotString(vm, 1, "England");
@@ -88,9 +88,9 @@ static void containsAPI(WrenVM* vm)
   wrenSetSlotBool(vm, 0, result);
 }
 
-static void containsAPIFalse(WrenVM* vm)
+static void containsAPIFalse(WrenVM* vm, void *userData)
 {
-  insert(vm);
+  insert(vm, userData);
 
   wrenEnsureSlots(vm, 1);
   wrenSetSlotString(vm, 1, "DefinitelyNotARealKey");
@@ -115,7 +115,7 @@ WrenForeignMethodFn mapsBindMethod(const char* signature)
   return NULL;
 }
 
-void foreignAllocate(WrenVM* vm) {
+void foreignAllocate(WrenVM* vm, void *userData) {
   wrenSetSlotNewForeign(vm, 0, 0, 0);
 }
 

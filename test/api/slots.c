@@ -3,12 +3,12 @@
 
 #include "slots.h"
 
-static void noSet(WrenVM* vm)
+static void noSet(WrenVM* vm, void *userData)
 {
   // Do nothing.
 }
 
-static void getSlots(WrenVM* vm)
+static void getSlots(WrenVM* vm, void *userData)
 {
   bool result = true;
   if (wrenGetSlotBool(vm, 1) != true) result = false;
@@ -37,7 +37,7 @@ static void getSlots(WrenVM* vm)
   wrenReleaseHandle(vm, handle);
 }
 
-static void setSlots(WrenVM* vm)
+static void setSlots(WrenVM* vm, void *userData)
 {
   WrenHandle* handle = wrenGetSlotHandle(vm, 1);
 
@@ -76,7 +76,7 @@ static void setSlots(WrenVM* vm)
   wrenReleaseHandle(vm, handle);
 }
 
-static void slotTypes(WrenVM* vm)
+static void slotTypes(WrenVM* vm, void *userData)
 {
   bool result =
       wrenGetSlotType(vm, 1) == WREN_TYPE_BOOL &&
@@ -91,7 +91,7 @@ static void slotTypes(WrenVM* vm)
   wrenSetSlotBool(vm, 0, result);
 }
 
-static void ensure(WrenVM* vm)
+static void ensure(WrenVM* vm, void *userData)
 {
   int before = wrenGetSlotCount(vm);
 
@@ -117,7 +117,7 @@ static void ensure(WrenVM* vm)
   wrenSetSlotString(vm, 0, result);
 }
 
-static void ensureOutsideForeign(WrenVM* vm)
+static void ensureOutsideForeign(WrenVM* vm, void *userData)
 {
   // To test the behavior outside of a foreign method (which we're currently
   // in), create a new separate VM.
@@ -151,23 +151,23 @@ static void ensureOutsideForeign(WrenVM* vm)
   wrenSetSlotString(vm, 0, result);
 }
 
-static void foreignClassAllocate(WrenVM* vm)
+static void foreignClassAllocate(WrenVM* vm, void *userData)
 {
   wrenSetSlotNewForeign(vm, 0, 0, 4);
 }
 
-static void getListCount(WrenVM* vm)
+static void getListCount(WrenVM* vm, void *userData)
 {
   wrenSetSlotDouble(vm, 0, wrenGetListCount(vm, 1));
 }
 
-static void getListElement(WrenVM* vm)
+static void getListElement(WrenVM* vm, void *userData)
 {
   int index = (int)wrenGetSlotDouble(vm, 2);
   wrenGetListElement(vm, 1, index, 0);
 }
 
-static void getMapValue(WrenVM* vm)
+static void getMapValue(WrenVM* vm, void *userData)
 {
   wrenGetMapValue(vm, 1, 2, 0);
 }
