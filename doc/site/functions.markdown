@@ -97,6 +97,11 @@ System.print(counter.call()) //> 2
 System.print(counter.call()) //> 3
 </pre>
 
+Variables outside the scope of the closure are captured by reference and not by
+copy, so writing to a captured variable will mutate it in the outer scope as 
+well. If you're familiar with C++, you can think of it like using [&] when 
+creating a lambda.
+
 ## Callable classes
 
 Because `Fn` is a class, and responds to `call()`, any class can respond to 
