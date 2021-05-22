@@ -55,7 +55,8 @@
     <IgnoreWarnCompileDuplicatedFilename>true</IgnoreWarnCompileDuplicatedFilename>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>wren</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.18362.0</WindowsTargetPlatformVersion>
+    <LatestTargetPlatformVersion>$([Microsoft.Build.Utilities.ToolLocationHelper]::GetLatestSDKTargetPlatformVersion('Windows', '10.0'))</LatestTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>$(LatestTargetPlatformVersion)</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release 64bit|x64'" Label="Configuration">
@@ -251,11 +252,13 @@
   <ItemGroup>
     <ClInclude Include="..\..\src\include\wren.h" />
     <ClInclude Include="..\..\src\optional\wren_opt_meta.h" />
+    <ClInclude Include="..\..\src\optional\wren_opt_mirror.h" />
     <ClInclude Include="..\..\src\optional\wren_opt_random.h" />
     <ClInclude Include="..\..\src\vm\wren_common.h" />
     <ClInclude Include="..\..\src\vm\wren_compiler.h" />
     <ClInclude Include="..\..\src\vm\wren_core.h" />
     <ClInclude Include="..\..\src\vm\wren_debug.h" />
+    <ClInclude Include="..\..\src\vm\wren_math.h" />
     <ClInclude Include="..\..\src\vm\wren_opcodes.h" />
     <ClInclude Include="..\..\src\vm\wren_primitive.h" />
     <ClInclude Include="..\..\src\vm\wren_utils.h" />
@@ -264,6 +267,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\optional\wren_opt_meta.c" />
+    <ClCompile Include="..\..\src\optional\wren_opt_mirror.c" />
     <ClCompile Include="..\..\src\optional\wren_opt_random.c" />
     <ClCompile Include="..\..\src\vm\wren_compiler.c" />
     <ClCompile Include="..\..\src\vm\wren_core.c" />

@@ -253,6 +253,7 @@ ObjFn* wrenNewFunction(WrenVM* vm, ObjModule* module, int maxSlots)
   wrenValueBufferInit(&fn->constants);
   wrenByteBufferInit(&fn->code);
   fn->module = module;
+  fn->boundToClass = NULL;
   fn->maxSlots = maxSlots;
   fn->numUpvalues = 0;
   fn->arity = 0;

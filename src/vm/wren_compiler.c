@@ -3842,6 +3842,9 @@ ObjFn* wrenCompile(WrenVM* vm, ObjModule* module, const char* source,
 
 void wrenBindMethodCode(ObjClass* classObj, ObjFn* fn)
 {
+  ASSERT(fn->boundToClass == NULL, "Trying to rebound a method");
+  fn->boundToClass = classObj;
+
   int ip = 0;
   for (;;)
   {

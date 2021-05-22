@@ -78,6 +78,7 @@
 #define IS_INSTANCE(value) (wrenIsObjType(value, OBJ_INSTANCE)) // ObjInstance
 #define IS_LIST(value) (wrenIsObjType(value, OBJ_LIST))         // ObjList
 #define IS_MAP(value) (wrenIsObjType(value, OBJ_MAP))           // ObjMap
+#define IS_MODULE(value) (wrenIsObjType(value, OBJ_MODULE))     // ObjModule
 #define IS_RANGE(value) (wrenIsObjType(value, OBJ_RANGE))       // ObjRange
 #define IS_STRING(value) (wrenIsObjType(value, OBJ_STRING))     // ObjString
 
@@ -247,12 +248,14 @@ typedef struct
 typedef struct
 {
   Obj obj;
-  
+
   ByteBuffer code;
   ValueBuffer constants;
   
   // The module where this function was defined.
   ObjModule* module;
+
+  ObjClass* boundToClass;
 
   // The maximum number of stack slots this function may use.
   int maxSlots;
@@ -632,6 +635,18 @@ ObjClass* wrenNewClass(WrenVM* vm, ObjClass* superclass, int numFields,
                        ObjString* name);
 
 void wrenBindMethod(WrenVM* vm, ObjClass* classObj, int symbol, Method method);
+
+static inline Method *wrenClassGetMethod(WrenVM* vm, const ObjClass* classObj,
+                                         int symbol)
+{
+  Method* method;
+  if (symbol >= 0 && symbol < classObj->methods.count &&
+      (method = &classObj->methods.data[symbol])->type != METHOD_NONE)
+  {
+    return method;
+  }
+  return NULL;
+}
 
 // Creates a new closure object that invokes [fn]. Allocates room for its
 // upvalues, but assumes outside code will populate it.
