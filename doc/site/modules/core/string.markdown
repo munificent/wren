@@ -250,6 +250,14 @@ Like `trim()` but only removes from the beginning of the string.
 System.print("ᵔᴥᵔᴥᵔbearᵔᴥᴥᵔᵔ".trimStart("ᵔᴥ")) //> bearᵔᴥᴥᵔᵔ
 </pre>
 
+### **lower**
+
+Returns a new string with all ASCII and basic IS0-8859-1 characters converted to lower case.
+
+<pre class="snippet">
+System.print("HÉllo World!".lower) //> "héllo world!"
+</pre>
+
 ### **+**(other) operator
 
 Returns a new string that concatenates this string and `other`.

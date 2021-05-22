@@ -236,6 +236,17 @@ class String is Sequence {
     return result
   }
 
+  lower {
+    var output = ""
+    for (c in codePoints) {
+      if ((c >= 65 && c <= 90) || (c >= 192 && c <= 214) || (c >= 216 && c <= 222)) {
+        c = c + 32
+      }
+      output = output + String.fromCodePoint(c)
+    }
+    return output
+  }
+
   trim() { trim_("\t\r\n ", true, true) }
   trim(chars) { trim_(chars, true, true) }
   trimEnd() { trim_("\t\r\n ", false, true) }
