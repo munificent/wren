@@ -358,7 +358,18 @@ class List is Sequence {
     return i+1
   }
 
-  toString { "[%(join(", "))]" }
+  toString {
+    var result = "["
+    for (i in 0..(count-1)) {
+      if (i != 0) result = result + ", "
+      if (this[i] is String) {
+        result = result + "\"%(this[i])\""
+      } else {
+        result = result + this[i].toString
+      }
+    }
+    return result + "]"
+  }
 
   +(other) {
     var result = this[0..-1]
@@ -392,7 +403,19 @@ class Map is Sequence {
     for (key in keys) {
       if (!first) result = result + ", "
       first = false
-      result = result + "%(key): %(this[key])"
+
+      if (key is String) {
+        result = result + "\"%(key)\": "
+      } else {
+        result = result + key.toString + ": "
+      }
+
+      var value = this[key]
+      if (value is String) {
+        result = result + "\"%(value)\""
+      } else {
+        result = result + value.toString
+      }
     }
 
     return result + "}"
@@ -414,7 +437,21 @@ class MapEntry {
   key { _key }
   value { _value }
 
-  toString { "%(_key):%(_value)" }
+  toString {
+    var result = ""
+    if (key is String) {
+        result = result + "\"%(key)\":"
+      } else {
+        result = result + key.toString + ":"
+      }
+
+      if (value is String) {
+        result = result + "\"%(value)\""
+      } else {
+        result = result + value.toString
+      }
+	  return result
+  }
 }
 
 class MapKeySequence is Sequence {
