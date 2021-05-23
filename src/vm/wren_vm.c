@@ -739,7 +739,6 @@ static Value importModule(WrenVM* vm, Value name)
   wrenPushRoot(vm, AS_OBJ(name));
 
   WrenLoadModuleResult result = {0};
-  const char* source = NULL;
   
   // Let the host try to provide the module.
   if (vm->config.loadModuleFn != NULL)
