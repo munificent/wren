@@ -463,7 +463,7 @@ typedef struct
 // for a key, we will continue past tombstones, because the desired key may be
 // found after them if the key that was removed was part of a prior collision.
 // When the array gets resized, all tombstones are discarded.
-typedef struct
+typedef struct sObjMap
 {
   Obj obj;
 
@@ -697,6 +697,10 @@ static inline bool wrenMapIsValidKey(Value arg);
 // Looks up [key] in [map]. If found, returns the value. Otherwise, returns
 // `UNDEFINED_VAL`.
 Value wrenMapGet(ObjMap* map, Value key);
+
+MapEntry* wrenMapFindStrLength(ObjMap* map, const char *text, size_t length);
+
+Value wrenMapGetStrLength(ObjMap* map, const char *text, size_t length);
 
 // Associates [key] with [value] in [map].
 void wrenMapSet(WrenVM* vm, ObjMap* map, Value key, Value value);

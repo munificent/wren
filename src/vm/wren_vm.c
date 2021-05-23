@@ -89,7 +89,7 @@ WrenVM* wrenNewVM(WrenConfiguration* config)
   vm->gray = (Obj**)reallocate(NULL, vm->grayCapacity * sizeof(Obj*), userData);
   vm->nextGC = vm->config.initialHeapSize;
 
-  wrenSymbolTableInit(&vm->methodNames);
+  wrenSymbolTableInit(vm, &vm->methodNames);
 
   vm->modules = wrenNewMap(vm);
   wrenInitializeCore(vm);
@@ -98,7 +98,7 @@ WrenVM* wrenNewVM(WrenConfiguration* config)
 
 void wrenFreeVM(WrenVM* vm)
 {
-  ASSERT(vm->methodNames.count > 0, "VM appears to have already been freed.");
+  ASSERT(wrenSymbolTableCount(&vm->methodNames) > 0, "VM appears to have already been freed.");
   
   // Free all of the GC objects.
   Obj* obj = vm->first;
@@ -117,7 +117,7 @@ void wrenFreeVM(WrenVM* vm)
   // may try to use. Better to tell them about the bug early.
   ASSERT(vm->handles == NULL, "All handles have not been released.");
 
-  wrenSymbolTableClear(vm, &vm->methodNames);
+  wrenSymbolTableFini(vm, &vm->methodNames);
 
   DEALLOCATE(vm, vm);
 }
@@ -437,8 +437,9 @@ static void runtimeError(WrenVM* vm)
 // method with [symbol] on [classObj].
 static void methodNotFound(WrenVM* vm, ObjClass* classObj, int symbol)
 {
-  vm->fiber->error = wrenStringFormat(vm, "@ does not implement '$'.",
-      OBJ_VAL(classObj->name), vm->methodNames.data[symbol]->value);
+  vm->fiber->error = wrenStringFormat(vm, "@ does not implement '@'.",
+      OBJ_VAL(classObj->name),
+      OBJ_VAL(wrenSymbolTableGet(&vm->methodNames, symbol)));
 }
 
 // Looks up the previously loaded module with [name].
@@ -474,9 +475,11 @@ static ObjClosure* compileInModule(WrenVM* vm, Value name, const char* source,
     ObjModule* coreModule = getModule(vm, NULL_VAL);
     for (int i = 0; i < coreModule->variables.count; i++)
     {
+      ObjString* variableName = wrenSymbolTableGet(&coreModule->variableNames, i);
+
       wrenDefineVariable(vm, module,
-                         coreModule->variableNames.data[i]->value,
-                         coreModule->variableNames.data[i]->length,
+                         variableName->value,
+                         variableName->length,
                          coreModule->variables.data[i], NULL);
     }
   }
