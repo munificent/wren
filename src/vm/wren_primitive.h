@@ -63,6 +63,10 @@
       return false;                                                            \
     } while (false)
 
+// Validates that the given [arg] is a boolean. Returns true if it is. If not,
+// reports an error and returns false.
+bool validateBool(WrenVM* vm, Value arg, const char* argName);
+
 // Validates that the given [arg] is a function. Returns true if it is. If not,
 // reports an error and returns false.
 bool validateFn(WrenVM* vm, Value arg, const char* argName);

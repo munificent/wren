@@ -20,6 +20,12 @@ static uint32_t validateIndexValue(WrenVM* vm, uint32_t count, double value,
   return UINT32_MAX;
 }
 
+bool validateBool(WrenVM* vm, Value arg, const char* argName)
+{
+  if (IS_BOOL(arg)) return true;
+  RETURN_ERROR_FMT("$ must be a boolean.", argName);
+}
+
 bool validateFn(WrenVM* vm, Value arg, const char* argName)
 {
   if (IS_CLOSURE(arg)) return true;

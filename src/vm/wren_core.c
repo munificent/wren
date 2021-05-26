@@ -13,6 +13,20 @@
 
 #include "wren_core.wren.inc"
 
+// Defines a primitive on Num that call infix bitwise [op].
+#define DEF_BOOL_BITWISE(name, op)                                             \
+    DEF_PRIMITIVE(bool_bitwise##name)                                          \
+    {                                                                          \
+      if (!validateBool(vm, args[1], "Right operand")) return false;           \
+      bool left = AS_BOOL(args[0]);                                            \
+      bool right = AS_BOOL(args[1]);                                           \
+      RETURN_BOOL(left op right);                                              \
+    }
+
+DEF_BOOL_BITWISE(And,        &)
+DEF_BOOL_BITWISE(Or,         |)
+DEF_BOOL_BITWISE(Xor,        ^)
+
 DEF_PRIMITIVE(bool_not)
 {
   RETURN_BOOL(!AS_BOOL(args[0]));
@@ -1300,7 +1314,11 @@ void wrenInitializeCore(WrenVM* vm)
 
   vm->boolClass = AS_CLASS(wrenFindVariable(vm, coreModule, "Bool"));
   PRIMITIVE(vm->boolClass, "toString", bool_toString);
+  PRIMITIVE(vm->boolClass, "&(_)", bool_bitwiseAnd);
+  PRIMITIVE(vm->boolClass, "|(_)", bool_bitwiseOr);
+  PRIMITIVE(vm->boolClass, "^(_)", bool_bitwiseXor);
   PRIMITIVE(vm->boolClass, "!", bool_not);
+  PRIMITIVE(vm->boolClass, "~", bool_not);
 
   vm->fiberClass = AS_CLASS(wrenFindVariable(vm, coreModule, "Fiber"));
   PRIMITIVE(vm->fiberClass->obj.classObj, "new(_)", fiber_new);
