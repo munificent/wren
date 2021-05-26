@@ -1726,7 +1726,7 @@ typedef enum
   PREC_RANGE,         // .. ...
   PREC_TERM,          // + -
   PREC_FACTOR,        // * / %
-  PREC_UNARY,         // unary - ! ~
+  PREC_UNARY,         // unary + - ! ~
   PREC_CALL,          // . () []
   PREC_PRIMARY
 } Precedence;
@@ -2763,7 +2763,7 @@ GrammarRule rules[] =
   /* TOKEN_SLASH         */ INFIX_OPERATOR(PREC_FACTOR, "/"),
   /* TOKEN_PERCENT       */ INFIX_OPERATOR(PREC_FACTOR, "%"),
   /* TOKEN_HASH          */ UNUSED,
-  /* TOKEN_PLUS          */ INFIX_OPERATOR(PREC_TERM, "+"),
+  /* TOKEN_PLUS          */ OPERATOR("+"),
   /* TOKEN_MINUS         */ OPERATOR("-"),
   /* TOKEN_LTLT          */ INFIX_OPERATOR(PREC_BITWISE_SHIFT, "<<"),
   /* TOKEN_GTGT          */ INFIX_OPERATOR(PREC_BITWISE_SHIFT, ">>"),

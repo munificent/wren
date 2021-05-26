@@ -205,6 +205,18 @@ System.print(1.5.truncate)    //> 1
 System.print((-3.2).truncate) //> -3
 </pre>
 
+### **+** operator
+
+Returns the identity of the number.
+
+<pre class="snippet">
+var a = +123
+System.print(a) //> 123
+
+var b = -123
+System.print(+b) //> -123
+</pre>
+
 ### **-** operator
 
 Negates the number.
