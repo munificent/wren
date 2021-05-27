@@ -53,6 +53,17 @@ LIBS += ../../lib/libwren.a -lm
 LDDEPS += ../../lib/libwren.a
 ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib32 -m32 -s
 
+else ifeq ($(config),release_arm)
+TARGETDIR = ../../bin
+TARGET = $(TARGETDIR)/wren_test
+OBJDIR = obj/arm/Release/wren_test
+DEFINES += -DNDEBUG
+ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -O2 -std=c99
+ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -O2
+LIBS += ../../lib/libwren.a -lm
+LDDEPS += ../../lib/libwren.a
+ALL_LDFLAGS += $(LDFLAGS) -s
+
 else ifeq ($(config),release_64bit-no-nan-tagging)
 TARGETDIR = ../../bin
 TARGET = $(TARGETDIR)/wren_test
@@ -86,6 +97,17 @@ LIBS += ../../lib/libwren_d.a -lm
 LDDEPS += ../../lib/libwren_d.a
 ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib32 -m32
 
+else ifeq ($(config),debug_arm)
+TARGETDIR = ../../bin
+TARGET = $(TARGETDIR)/wren_test_d
+OBJDIR = obj/arm/Debug/wren_test
+DEFINES += -DDEBUG
+ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -g -std=c99
+ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -g
+LIBS += ../../lib/libwren_d.a -lm
+LDDEPS += ../../lib/libwren_d.a
+ALL_LDFLAGS += $(LDFLAGS)
+
 else ifeq ($(config),debug_64bit-no-nan-tagging)
 TARGETDIR = ../../bin
 TARGET = $(TARGETDIR)/wren_test_d
@@ -97,8 +119,6 @@ LIBS += ../../lib/libwren_d.a -lm
 LDDEPS += ../../lib/libwren_d.a
 ALL_LDFLAGS += $(LDFLAGS)
 
-else
-  $(error "invalid configuration $(config)")
 endif
 
 # Per File Configurations
@@ -108,8 +128,28 @@ endif
 # File sets
 # #############################################
 
+GENERATED :=
 OBJECTS :=
 
+GENERATED += $(OBJDIR)/api_tests.o
+GENERATED += $(OBJDIR)/benchmark.o
+GENERATED += $(OBJDIR)/call.o
+GENERATED += $(OBJDIR)/call_calls_foreign.o
+GENERATED += $(OBJDIR)/call_wren_call_root.o
+GENERATED += $(OBJDIR)/error.o
+GENERATED += $(OBJDIR)/foreign_class.o
+GENERATED += $(OBJDIR)/get_variable.o
+GENERATED += $(OBJDIR)/handle.o
+GENERATED += $(OBJDIR)/lists.o
+GENERATED += $(OBJDIR)/main.o
+GENERATED += $(OBJDIR)/maps.o
+GENERATED += $(OBJDIR)/new_vm.o
+GENERATED += $(OBJDIR)/reset_stack_after_call_abort.o
+GENERATED += $(OBJDIR)/reset_stack_after_foreign_construct.o
+GENERATED += $(OBJDIR)/resolution.o
+GENERATED += $(OBJDIR)/slots.o
+GENERATED += $(OBJDIR)/test.o
+GENERATED += $(OBJDIR)/user_data.o
 OBJECTS += $(OBJDIR)/api_tests.o
 OBJECTS += $(OBJDIR)/benchmark.o
 OBJECTS += $(OBJDIR)/call.o
@@ -136,7 +176,7 @@ OBJECTS += $(OBJDIR)/user_data.o
 all: $(TARGET)
 	@:
 
-$(TARGET): $(OBJECTS) $(LDDEPS) | $(TARGETDIR)
+$(TARGET): $(GENERATED) $(OBJECTS) $(LDDEPS) | $(TARGETDIR)
 	$(PRELINKCMDS)
 	@echo Linking wren_test
 	$(SILENT) $(LINKCMD)
@@ -162,9 +202,11 @@ clean:
 	@echo Cleaning wren_test
 ifeq (posix,$(SHELLTYPE))
 	$(SILENT) rm -f  $(TARGET)
+	$(SILENT) rm -rf $(GENERATED)
 	$(SILENT) rm -rf $(OBJDIR)
 else
 	$(SILENT) if exist $(subst /,\\,$(TARGET)) del $(subst /,\\,$(TARGET))
+	$(SILENT) if exist $(subst /,\\,$(GENERATED)) rmdir /s /q $(subst /,\\,$(GENERATED))
 	$(SILENT) if exist $(subst /,\\,$(OBJDIR)) rmdir /s /q $(subst /,\\,$(OBJDIR))
 endif
 

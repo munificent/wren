@@ -1,6 +1,6 @@
 workspace "wren"
   configurations { "Release", "Debug" }
-  platforms { "64bit", "32bit", "64bit-no-nan-tagging" }
+  platforms { "64bit", "32bit", "arm", "64bit-no-nan-tagging" }
   defaultplatform "64bit"
   startproject "wren_test"
   location ("../" .. _ACTION)

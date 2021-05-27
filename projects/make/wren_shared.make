@@ -51,6 +51,15 @@ ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m32 -O2 -fPIC -std=c99
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m32 -O2 -fPIC
 ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib32 -m32 -shared -Wl,-soname=libwren.so -s
 
+else ifeq ($(config),release_arm)
+TARGETDIR = ../../lib
+TARGET = $(TARGETDIR)/libwren.so
+OBJDIR = obj/arm/Release/wren_shared
+DEFINES += -DNDEBUG
+ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -O2 -fPIC -std=c99
+ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -O2 -fPIC
+ALL_LDFLAGS += $(LDFLAGS) -shared -Wl,-soname=libwren.so -s
+
 else ifeq ($(config),release_64bit-no-nan-tagging)
 TARGETDIR = ../../lib
 TARGET = $(TARGETDIR)/libwren.so
@@ -78,6 +87,15 @@ ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m32 -fPIC -g -std=c99
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m32 -fPIC -g
 ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib32 -m32 -shared -Wl,-soname=libwren_d.so
 
+else ifeq ($(config),debug_arm)
+TARGETDIR = ../../lib
+TARGET = $(TARGETDIR)/libwren_d.so
+OBJDIR = obj/arm/Debug/wren_shared
+DEFINES += -DDEBUG
+ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -fPIC -g -std=c99
+ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -fPIC -g
+ALL_LDFLAGS += $(LDFLAGS) -shared -Wl,-soname=libwren_d.so
+
 else ifeq ($(config),debug_64bit-no-nan-tagging)
 TARGETDIR = ../../lib
 TARGET = $(TARGETDIR)/libwren_d.so
@@ -87,8 +105,6 @@ ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -fPIC -g -std=c99
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -fPIC -g
 ALL_LDFLAGS += $(LDFLAGS) -shared -Wl,-soname=libwren_d.so
 
-else
-  $(error "invalid configuration $(config)")
 endif
 
 # Per File Configurations
@@ -98,8 +114,18 @@ endif
 # File sets
 # #############################################
 
+GENERATED :=
 OBJECTS :=
 
+GENERATED += $(OBJDIR)/wren_compiler.o
+GENERATED += $(OBJDIR)/wren_core.o
+GENERATED += $(OBJDIR)/wren_debug.o
+GENERATED += $(OBJDIR)/wren_opt_meta.o
+GENERATED += $(OBJDIR)/wren_opt_random.o
+GENERATED += $(OBJDIR)/wren_primitive.o
+GENERATED += $(OBJDIR)/wren_utils.o
+GENERATED += $(OBJDIR)/wren_value.o
+GENERATED += $(OBJDIR)/wren_vm.o
 OBJECTS += $(OBJDIR)/wren_compiler.o
 OBJECTS += $(OBJDIR)/wren_core.o
 OBJECTS += $(OBJDIR)/wren_debug.o
@@ -116,7 +142,7 @@ OBJECTS += $(OBJDIR)/wren_vm.o
 all: $(TARGET)
 	@:
 
-$(TARGET): $(OBJECTS) $(LDDEPS) | $(TARGETDIR)
+$(TARGET): $(GENERATED) $(OBJECTS) $(LDDEPS) | $(TARGETDIR)
 	$(PRELINKCMDS)
 	@echo Linking wren_shared
 	$(SILENT) $(LINKCMD)
@@ -142,9 +168,11 @@ clean:
 	@echo Cleaning wren_shared
 ifeq (posix,$(SHELLTYPE))
 	$(SILENT) rm -f  $(TARGET)
+	$(SILENT) rm -rf $(GENERATED)
 	$(SILENT) rm -rf $(OBJDIR)
 else
 	$(SILENT) if exist $(subst /,\\,$(TARGET)) del $(subst /,\\,$(TARGET))
+	$(SILENT) if exist $(subst /,\\,$(GENERATED)) rmdir /s /q $(subst /,\\,$(GENERATED))
 	$(SILENT) if exist $(subst /,\\,$(OBJDIR)) rmdir /s /q $(subst /,\\,$(OBJDIR))
 endif
 
