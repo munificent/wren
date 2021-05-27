@@ -47,6 +47,8 @@ BENCHMARK_DIR = relpath(BENCHMARK_DIR).replace("\\", "/")
 # How many times to run a given benchmark.
 NUM_TRIALS = 10
 
+# Results.  Columns are [0]=name, [1]=regex to match against stdout to check
+# if the benchmark succeeded, [2]=best score (from get_score())
 BENCHMARKS = []
 
 def BENCHMARK(name, pattern):
@@ -196,8 +198,8 @@ def run_benchmark_language(benchmark, language, benchmark_result):
     times.append(time)
     sys.stdout.write(".")
 
-  best = min(times)
-  score = get_score(best)
+  best_time = min(times)
+  score = get_score(best_time)
 
   comparison = ""
   if language[0] == "wren":
@@ -221,7 +223,7 @@ def run_benchmark_language(benchmark, language, benchmark_result):
       comparison = red(comparison)
 
   print(" {:4.2f}s {:4.4f} {:s}".format(
-      best,
+      best_time,
       standard_deviation(times),
       comparison))
 
@@ -281,11 +283,11 @@ def read_baseline():
   if os.path.exists(baseline_file):
     with open(baseline_file) as f:
       for line in f.readlines():
-        name, best = line.split(",")
+        name, score = line.split(",")
         for benchmark in BENCHMARKS:
           if benchmark[0] == name:
-            if not best.startswith("None"):
-              benchmark[2] = float(best)
+            if not score.startswith("None"):
+              benchmark[2] = float(score)
             else:
               benchmark[2] = 0.0
 
@@ -294,8 +296,8 @@ def generate_baseline():
   print("generating baseline")
   baseline_text = ""
   for benchmark in BENCHMARKS:
-    best = run_benchmark_language(benchmark, LANGUAGES[0], {})
-    baseline_text += ("{},{}\n".format(benchmark[0], best))
+    score = run_benchmark_language(benchmark, LANGUAGES[0], {})
+    baseline_text += ("{},{}\n".format(benchmark[0], score))
 
   # Write them to a file.
   baseline_file = os.path.join(BENCHMARK_DIR, "baseline.txt")
