@@ -48,3 +48,19 @@ fn.call("Hello world")
 It is a runtime error if the number of arguments given is less than the arity
 of the function. If more arguments are given than the function's arity they are
 ignored.
+
+### **callAll**(args)
+
+Invokdes the function with the given readonly arrayed object holding arguments.
+
+<pre class="snippet">
+var fn = Fn.new { |arg|
+  System.print(arg)     //> Hello world
+}
+
+fn.callAll(["Hello world"])
+</pre>
+
+It is a runtime error if the number of arguments given in the arrayed object is
+less than the arity of the function. If more arguments are given than the
+function's arity they are ignored.

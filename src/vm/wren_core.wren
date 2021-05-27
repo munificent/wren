@@ -1,8 +1,31 @@
 class Bool {}
 class Fiber {}
-class Fn {}
 class Null {}
 class Num {}
+
+class Fn {
+  callAll(args) {
+    var arity = args.count
+
+    if (arity ==  0) return call()
+    if (arity ==  1) return call(args[0])
+    if (arity ==  2) return call(args[0], args[1])
+    if (arity ==  3) return call(args[0], args[1], args[2])
+    if (arity ==  4) return call(args[0], args[1], args[2], args[3])
+    if (arity ==  5) return call(args[0], args[1], args[2], args[3], args[4])
+    if (arity ==  6) return call(args[0], args[1], args[2], args[3], args[4], args[5])
+    if (arity ==  7) return call(args[0], args[1], args[2], args[3], args[4], args[5], args[6])
+    if (arity ==  8) return call(args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7])
+    if (arity ==  9) return call(args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8])
+    if (arity == 10) return call(args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9])
+    if (arity == 11) return call(args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], args[10])
+    if (arity == 12) return call(args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], args[10], args[11])
+    if (arity == 13) return call(args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], args[10], args[11], args[12])
+    if (arity == 14) return call(args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], args[10], args[11], args[12], args[13])
+    if (arity == 15) return call(args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], args[10], args[11], args[12], args[13], args[14])
+                     return call(args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], args[10], args[11], args[12], args[13], args[14], args[15])
+  }
+}
 
 class Sequence {
   all(f) {
