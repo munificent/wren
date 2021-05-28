@@ -18,3 +18,9 @@ System.print(!false) //> true
 ### toString
 
 The string representation of the value, either `"true"` or `"false"`.
+
+### **toCNum**
+
+Converts the value to a Num using the C99 language's notion of truth i.e. false corresponds to `0` and true to `1`.
+
+Note that this differs from Wren's notion of truth where every number (including ±0) is considered to be true
