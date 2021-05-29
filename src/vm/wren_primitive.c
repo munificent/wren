@@ -1,4 +1,5 @@
 #include "wren_primitive.h"
+#include "wren_value.h"
 
 #include <math.h>
 

@@ -146,6 +146,18 @@ ObjClosure* wrenNewClosure(WrenVM* vm, ObjFn* fn)
   return closure;
 }
 
+inline void wrenAppendCallFrame(WrenVM* vm, ObjFiber* fiber,
+                                       ObjClosure* closure, Value* stackStart)
+{
+  // The caller should have ensured we already have enough capacity.
+  ASSERT(fiber->frameCapacity > fiber->numFrames, "No memory for call frame.");
+  
+  CallFrame* frame = &fiber->frames[fiber->numFrames++];
+  frame->stackStart = stackStart;
+  frame->closure = closure;
+  frame->ip = closure->fn->code.data;
+}
+
 ObjFiber* wrenNewFiber(WrenVM* vm, ObjClosure* closure)
 {
   // Allocate the arrays before the fiber in case it triggers a GC.
@@ -229,6 +241,11 @@ void wrenEnsureStack(WrenVM* vm, ObjFiber* fiber, int needed)
     
     fiber->stackTop = fiber->stack + (fiber->stackTop - oldStack);
   }
+}
+
+inline bool wrenHasError(const ObjFiber* fiber)
+{
+  return !IS_NULL(fiber->error);
 }
 
 ObjForeign* wrenNewForeign(WrenVM* vm, ObjClass* classObj, size_t size)
@@ -960,6 +977,12 @@ uint32_t wrenStringFind(ObjString* haystack, ObjString* needle, uint32_t start)
   return UINT32_MAX;
 }
 
+inline bool wrenStringEqualsCString(const ObjString* a,
+                                    const char* b, size_t length)
+{
+  return a->length == length && memcmp(a->value, b, length) == 0;
+}
+
 ObjUpvalue* wrenNewUpvalue(WrenVM* vm, Value* value)
 {
   ObjUpvalue* upvalue = ALLOCATE(vm, ObjUpvalue);
@@ -1284,6 +1307,19 @@ void wrenFreeObj(WrenVM* vm, Obj* obj)
   DEALLOCATE(vm, obj);
 }
 
+inline bool wrenValuesSame(Value a, Value b)
+{
+#if WREN_NAN_TAGGING
+  // Value types have unique bit representations and we compare object types
+  // by identity (i.e. pointer), so all we need to do is compare the bits.
+  return a == b;
+#else
+  if (a.type != b.type) return false;
+  if (a.type == VAL_NUM) return a.as.num == b.as.num;
+  return a.as.obj == b.as.obj;
+#endif
+}
+
 ObjClass* wrenGetClass(WrenVM* vm, Value value)
 {
   return wrenGetClassInline(vm, value);
@@ -1327,4 +1363,66 @@ bool wrenValuesEqual(Value a, Value b)
       // we get here.
       return false;
   }
+}
+
+inline bool wrenIsBool(Value value)
+{
+#if WREN_NAN_TAGGING
+  return value == TRUE_VAL || value == FALSE_VAL;
+#else
+  return value.type == VAL_FALSE || value.type == VAL_TRUE;
+#endif
+}
+
+inline bool wrenIsObjType(Value value, ObjType type)
+{
+  return IS_OBJ(value) && AS_OBJ(value)->type == type;
+}
+
+inline Value wrenObjectToValue(Obj* obj)
+{
+#if WREN_NAN_TAGGING
+  // The triple casting is necessary here to satisfy some compilers:
+  // 1. (uintptr_t) Convert the pointer to a number of the right size.
+  // 2. (uint64_t)  Pad it up to 64 bits in 32-bit builds.
+  // 3. Or in the bits to make a tagged Nan.
+  // 4. Cast to a typedef'd value.
+  return (Value)(SIGN_BIT | QNAN | (uint64_t)(uintptr_t)(obj));
+#else
+  Value value;
+  value.type = VAL_OBJ;
+  value.as.obj = obj;
+  return value;
+#endif
+}
+
+inline double wrenValueToNum(Value value)
+{
+#if WREN_NAN_TAGGING
+  return wrenDoubleFromBits(value);
+#else
+  return value.as.num;
+#endif
+}
+
+inline Value wrenNumToValue(double num)
+{
+#if WREN_NAN_TAGGING
+  return wrenDoubleToBits(num);
+#else
+  Value value;
+  value.type = VAL_NUM;
+  value.as.num = num;
+  return value;
+#endif
+}
+
+inline bool wrenMapIsValidKey(Value arg)
+{
+  return IS_BOOL(arg)
+      || IS_CLASS(arg)
+      || IS_NULL(arg)
+      || IS_NUM(arg)
+      || IS_RANGE(arg)
+      || IS_STRING(arg);
 }

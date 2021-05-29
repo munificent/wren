@@ -16,6 +16,7 @@
 		B9CCD11CEBC61BCE65A5575C /* wren_core.c in Sources */ = {isa = PBXBuildFile; fileRef = A24154A4F8CEBF16D147D2E4 /* wren_core.c */; };
 		D1029E9FB01FB8D18C2914DF /* wren_opt_meta.c in Sources */ = {isa = PBXBuildFile; fileRef = 62592227F4E6EC195DBF9067 /* wren_opt_meta.c */; };
 		E1DB0F647751CE96E5EE25A4 /* wren_value.c in Sources */ = {isa = PBXBuildFile; fileRef = AD30296CDCC1F85EB7CF37AC /* wren_value.c */; };
+		F8DA42FE2AD38DB0A4B2C93E /* wren_math.c in Sources */ = {isa = PBXBuildFile; fileRef = 97564566EDE3AFD8C65CC3A6 /* wren_math.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -29,7 +30,9 @@
 		6F616124E0840216964AAF64 /* wren_primitive.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = wren_primitive.c; path = ../../src/vm/wren_primitive.c; sourceTree = "<group>"; };
 		737815DBCADD88CD7CEBA41B /* wren_opt_random.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = wren_opt_random.c; path = ../../src/optional/wren_opt_random.c; sourceTree = "<group>"; };
 		7BB4B776AC98AF68BFB0E5B6 /* wren_opcodes.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = wren_opcodes.h; path = ../../src/vm/wren_opcodes.h; sourceTree = "<group>"; };
+		80BCD9B0D74A4422AFC357F0 /* wren_math.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = wren_math.h; path = ../../src/vm/wren_math.h; sourceTree = "<group>"; };
 		8BA7E8EEE2355360BAAE672E /* wren_core.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = wren_core.h; path = ../../src/vm/wren_core.h; sourceTree = "<group>"; };
+		97564566EDE3AFD8C65CC3A6 /* wren_math.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = wren_math.c; path = ../../src/vm/wren_math.c; sourceTree = "<group>"; };
 		A24154A4F8CEBF16D147D2E4 /* wren_core.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = wren_core.c; path = ../../src/vm/wren_core.c; sourceTree = "<group>"; };
 		A5CED894D560A786B06DE6D4 /* wren_utils.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = wren_utils.c; path = ../../src/vm/wren_utils.c; sourceTree = "<group>"; };
 		AAEE79A50253EC97B46207E5 /* wren_opt_random.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = wren_opt_random.h; path = ../../src/optional/wren_opt_random.h; sourceTree = "<group>"; };
@@ -94,6 +97,8 @@
 				8BA7E8EEE2355360BAAE672E /* wren_core.h */,
 				39C26800695436F244617640 /* wren_debug.c */,
 				44AC34EA743E03DC4F4B432A /* wren_debug.h */,
+				97564566EDE3AFD8C65CC3A6 /* wren_math.c */,
+				80BCD9B0D74A4422AFC357F0 /* wren_math.h */,
 				7BB4B776AC98AF68BFB0E5B6 /* wren_opcodes.h */,
 				6F616124E0840216964AAF64 /* wren_primitive.c */,
 				FCC7D88E6DEA798023B126CE /* wren_primitive.h */,
@@ -172,6 +177,7 @@
 				76585F8088823C32BC7325C0 /* wren_compiler.c in Sources */,
 				B9CCD11CEBC61BCE65A5575C /* wren_core.c in Sources */,
 				20773D38B5EDFC6A248A5378 /* wren_debug.c in Sources */,
+				F8DA42FE2AD38DB0A4B2C93E /* wren_math.c in Sources */,
 				76CC0A9CBADFDBCEAEB160DC /* wren_primitive.c in Sources */,
 				8D5FBD0C22D67C3E9172D34C /* wren_utils.c in Sources */,
 				E1DB0F647751CE96E5EE25A4 /* wren_value.c in Sources */,

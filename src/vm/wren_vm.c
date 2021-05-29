@@ -8,6 +8,7 @@
 #include "wren_debug.h"
 #include "wren_primitive.h"
 #include "wren_vm.h"
+#include "wren_value.h"
 
 #if WREN_OPT_META
   #include "wren_opt_meta.h"
@@ -1610,6 +1611,26 @@ int wrenDefineVariable(WrenVM* vm, ObjModule* module, const char* name,
   return symbol;
 }
 
+void wrenCallFunction(WrenVM* vm, ObjFiber* fiber,
+                      ObjClosure* closure, int numArgs)
+{
+  // Grow the call frame array if needed.
+  if (fiber->numFrames + 1 > fiber->frameCapacity)
+  {
+    int max = fiber->frameCapacity * 2;
+    fiber->frames = (CallFrame*)wrenReallocate(vm, fiber->frames,
+        sizeof(CallFrame) * fiber->frameCapacity, sizeof(CallFrame) * max);
+    fiber->frameCapacity = max;
+  }
+  
+  // Grow the stack if needed.
+  int stackSize = (int)(fiber->stackTop - fiber->stack);
+  int needed = stackSize + closure->fn->maxSlots;
+  wrenEnsureStack(vm, fiber, needed);
+  
+  wrenAppendCallFrame(vm, fiber, closure, fiber->stackTop - numArgs);
+}
+
 // TODO: Inline?
 void wrenPushRoot(WrenVM* vm, Obj* obj)
 {
@@ -1623,6 +1644,36 @@ void wrenPopRoot(WrenVM* vm)
 {
   ASSERT(vm->numTempRoots > 0, "No temporary roots to release.");
   vm->numTempRoots--;
+}
+
+inline ObjClass* wrenGetClassInline(WrenVM* vm, Value value)
+{
+  if (IS_NUM(value)) return vm->numClass;
+  if (IS_OBJ(value)) return AS_OBJ(value)->classObj;
+
+#if WREN_NAN_TAGGING
+  switch (GET_TAG(value))
+  {
+    case TAG_FALSE:     return vm->boolClass; break;
+    case TAG_NAN:       return vm->numClass; break;
+    case TAG_NULL:      return vm->nullClass; break;
+    case TAG_TRUE:      return vm->boolClass; break;
+    case TAG_UNDEFINED: UNREACHABLE();
+  }
+#else
+  switch (value.type)
+  {
+    case VAL_FALSE:     return vm->boolClass;
+    case VAL_NULL:      return vm->nullClass;
+    case VAL_NUM:       return vm->numClass;
+    case VAL_TRUE:      return vm->boolClass;
+    case VAL_OBJ:       return AS_OBJ(value)->classObj;
+    case VAL_UNDEFINED: UNREACHABLE();
+  }
+#endif
+
+  UNREACHABLE();
+  return NULL;
 }
 
 int wrenGetSlotCount(WrenVM* vm)
@@ -1990,4 +2041,14 @@ void* wrenGetUserData(WrenVM* vm)
 void wrenSetUserData(WrenVM* vm, void* userData)
 {
 	vm->config.userData = userData;
+}
+
+inline bool wrenIsLocalName(const char* name)
+{
+  return name[0] >= 'a' && name[0] <= 'z';
+}
+
+inline bool wrenIsFalsyValue(Value value)
+{
+  return IS_FALSE(value) || IS_NULL(value);
 }

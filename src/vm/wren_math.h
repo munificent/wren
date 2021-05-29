@@ -17,18 +17,8 @@ typedef union
 
 #define WREN_DOUBLE_NAN (wrenDoubleFromBits(WREN_DOUBLE_QNAN_POS_MIN_BITS))
 
-static inline double wrenDoubleFromBits(uint64_t bits)
-{
-  WrenDoubleBits data;
-  data.bits64 = bits;
-  return data.num;
-}
+double wrenDoubleFromBits(uint64_t bits);
 
-static inline uint64_t wrenDoubleToBits(double num)
-{
-  WrenDoubleBits data;
-  data.num = num;
-  return data.bits64;
-}
+uint64_t wrenDoubleToBits(double num);
 
 #endif

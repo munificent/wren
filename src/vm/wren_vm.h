@@ -175,25 +175,8 @@ int wrenDefineVariable(WrenVM* vm, ObjModule* module, const char* name,
 
 // Pushes [closure] onto [fiber]'s callstack to invoke it. Expects [numArgs]
 // arguments (including the receiver) to be on the top of the stack already.
-static inline void wrenCallFunction(WrenVM* vm, ObjFiber* fiber,
-                                    ObjClosure* closure, int numArgs)
-{
-  // Grow the call frame array if needed.
-  if (fiber->numFrames + 1 > fiber->frameCapacity)
-  {
-    int max = fiber->frameCapacity * 2;
-    fiber->frames = (CallFrame*)wrenReallocate(vm, fiber->frames,
-        sizeof(CallFrame) * fiber->frameCapacity, sizeof(CallFrame) * max);
-    fiber->frameCapacity = max;
-  }
-  
-  // Grow the stack if needed.
-  int stackSize = (int)(fiber->stackTop - fiber->stack);
-  int needed = stackSize + closure->fn->maxSlots;
-  wrenEnsureStack(vm, fiber, needed);
-  
-  wrenAppendCallFrame(vm, fiber, closure, fiber->stackTop - numArgs);
-}
+void wrenCallFunction(WrenVM* vm, ObjFiber* fiber,
+                      ObjClosure* closure, int numArgs);
 
 // Marks [obj] as a GC root so that it doesn't get collected.
 void wrenPushRoot(WrenVM* vm, Obj* obj);
@@ -206,46 +189,11 @@ void wrenPopRoot(WrenVM* vm);
 // Defined here instead of in wren_value.h because it's critical that this be
 // inlined. That means it must be defined in the header, but the wren_value.h
 // header doesn't have a full definitely of WrenVM yet.
-static inline ObjClass* wrenGetClassInline(WrenVM* vm, Value value)
-{
-  if (IS_NUM(value)) return vm->numClass;
-  if (IS_OBJ(value)) return AS_OBJ(value)->classObj;
-
-#if WREN_NAN_TAGGING
-  switch (GET_TAG(value))
-  {
-    case TAG_FALSE:     return vm->boolClass; break;
-    case TAG_NAN:       return vm->numClass; break;
-    case TAG_NULL:      return vm->nullClass; break;
-    case TAG_TRUE:      return vm->boolClass; break;
-    case TAG_UNDEFINED: UNREACHABLE();
-  }
-#else
-  switch (value.type)
-  {
-    case VAL_FALSE:     return vm->boolClass;
-    case VAL_NULL:      return vm->nullClass;
-    case VAL_NUM:       return vm->numClass;
-    case VAL_TRUE:      return vm->boolClass;
-    case VAL_OBJ:       return AS_OBJ(value)->classObj;
-    case VAL_UNDEFINED: UNREACHABLE();
-  }
-#endif
-
-  UNREACHABLE();
-  return NULL;
-}
+ObjClass* wrenGetClassInline(WrenVM* vm, Value value);
 
 // Returns `true` if [name] is a local variable name (starts with a lowercase
 // letter).
-static inline bool wrenIsLocalName(const char* name)
-{
-  return name[0] >= 'a' && name[0] <= 'z';
-}
-
-static inline bool wrenIsFalsyValue(Value value)
-{
-  return IS_FALSE(value) || IS_NULL(value);
-}
+bool wrenIsLocalName(const char* name);
+bool wrenIsFalsyValue(Value value);
 
 #endif

@@ -642,25 +642,13 @@ ObjFiber* wrenNewFiber(WrenVM* vm, ObjClosure* closure);
 
 // Adds a new [CallFrame] to [fiber] invoking [closure] whose stack starts at
 // [stackStart].
-static inline void wrenAppendCallFrame(WrenVM* vm, ObjFiber* fiber,
-                                       ObjClosure* closure, Value* stackStart)
-{
-  // The caller should have ensured we already have enough capacity.
-  ASSERT(fiber->frameCapacity > fiber->numFrames, "No memory for call frame.");
-  
-  CallFrame* frame = &fiber->frames[fiber->numFrames++];
-  frame->stackStart = stackStart;
-  frame->closure = closure;
-  frame->ip = closure->fn->code.data;
-}
+void wrenAppendCallFrame(WrenVM* vm, ObjFiber* fiber,
+                                       ObjClosure* closure, Value* stackStart);
 
 // Ensures [fiber]'s stack has at least [needed] slots.
 void wrenEnsureStack(WrenVM* vm, ObjFiber* fiber, int needed);
 
-static inline bool wrenHasError(const ObjFiber* fiber)
-{
-  return !IS_NULL(fiber->error);
-}
+bool wrenHasError(const ObjFiber* fiber);
 
 ObjForeign* wrenNewForeign(WrenVM* vm, ObjClass* classObj, size_t size);
 
@@ -688,11 +676,6 @@ int wrenListIndexOf(WrenVM* vm, ObjList* list, Value value);
 
 // Creates a new empty map.
 ObjMap* wrenNewMap(WrenVM* vm);
-
-// Validates that [arg] is a valid object for use as a map key. Returns true if
-// it is and returns false otherwise. Use validateKey usually, for a runtime error.
-// This separation exists to aid the API in surfacing errors to the developer as well.
-static inline bool wrenMapIsValidKey(Value arg);
 
 // Looks up [key] in [map]. If found, returns the value. Otherwise, returns
 // `UNDEFINED_VAL`.
@@ -761,11 +744,8 @@ uint32_t wrenStringFind(ObjString* haystack, ObjString* needle,
                         uint32_t startIndex);
 
 // Returns true if [a] and [b] represent the same string.
-static inline bool wrenStringEqualsCString(const ObjString* a,
-                                           const char* b, size_t length)
-{
-  return a->length == length && memcmp(a->value, b, length) == 0;
-}
+bool wrenStringEqualsCString(const ObjString* a,
+                                           const char* b, size_t length);
 
 // Creates a new open upvalue pointing to [value] on the stack.
 ObjUpvalue* wrenNewUpvalue(WrenVM* vm, Value* value);
@@ -800,18 +780,7 @@ ObjClass* wrenGetClass(WrenVM* vm, Value value);
 
 // Returns true if [a] and [b] are strictly the same value. This is identity
 // for object values, and value equality for unboxed values.
-static inline bool wrenValuesSame(Value a, Value b)
-{
-#if WREN_NAN_TAGGING
-  // Value types have unique bit representations and we compare object types
-  // by identity (i.e. pointer), so all we need to do is compare the bits.
-  return a == b;
-#else
-  if (a.type != b.type) return false;
-  if (a.type == VAL_NUM) return a.as.num == b.as.num;
-  return a.as.obj == b.as.obj;
-#endif
-}
+bool wrenValuesSame(Value a, Value b);
 
 // Returns true if [a] and [b] are equivalent. Immutable values (null, bools,
 // numbers, ranges, and strings) are equal if they have the same data. All
@@ -820,71 +789,24 @@ bool wrenValuesEqual(Value a, Value b);
 
 // Returns true if [value] is a bool. Do not call this directly, instead use
 // [IS_BOOL].
-static inline bool wrenIsBool(Value value)
-{
-#if WREN_NAN_TAGGING
-  return value == TRUE_VAL || value == FALSE_VAL;
-#else
-  return value.type == VAL_FALSE || value.type == VAL_TRUE;
-#endif
-}
+bool wrenIsBool(Value value);
 
 // Returns true if [value] is an object of type [type]. Do not call this
 // directly, instead use the [IS___] macro for the type in question.
-static inline bool wrenIsObjType(Value value, ObjType type)
-{
-  return IS_OBJ(value) && AS_OBJ(value)->type == type;
-}
+bool wrenIsObjType(Value value, ObjType type);
 
 // Converts the raw object pointer [obj] to a [Value].
-static inline Value wrenObjectToValue(Obj* obj)
-{
-#if WREN_NAN_TAGGING
-  // The triple casting is necessary here to satisfy some compilers:
-  // 1. (uintptr_t) Convert the pointer to a number of the right size.
-  // 2. (uint64_t)  Pad it up to 64 bits in 32-bit builds.
-  // 3. Or in the bits to make a tagged Nan.
-  // 4. Cast to a typedef'd value.
-  return (Value)(SIGN_BIT | QNAN | (uint64_t)(uintptr_t)(obj));
-#else
-  Value value;
-  value.type = VAL_OBJ;
-  value.as.obj = obj;
-  return value;
-#endif
-}
+Value wrenObjectToValue(Obj* obj);
 
 // Interprets [value] as a [double].
-static inline double wrenValueToNum(Value value)
-{
-#if WREN_NAN_TAGGING
-  return wrenDoubleFromBits(value);
-#else
-  return value.as.num;
-#endif
-}
+double wrenValueToNum(Value value);
 
 // Converts [num] to a [Value].
-static inline Value wrenNumToValue(double num)
-{
-#if WREN_NAN_TAGGING
-  return wrenDoubleToBits(num);
-#else
-  Value value;
-  value.type = VAL_NUM;
-  value.as.num = num;
-  return value;
-#endif
-}
+Value wrenNumToValue(double num);
 
-static inline bool wrenMapIsValidKey(Value arg)
-{
-  return IS_BOOL(arg)
-      || IS_CLASS(arg)
-      || IS_NULL(arg)
-      || IS_NUM(arg)
-      || IS_RANGE(arg)
-      || IS_STRING(arg);
-}
+// Validates that [arg] is a valid object for use as a map key. Returns true if
+// it is and returns false otherwise. Use validateKey usually, for a runtime error.
+// This separation exists to aid the API in surfacing errors to the developer as well.
+bool wrenMapIsValidKey(Value arg);
 
 #endif
