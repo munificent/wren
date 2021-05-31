@@ -28,6 +28,7 @@
 		6F616124E0840216964AAF64 /* wren_primitive.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = wren_primitive.c; path = ../../src/vm/wren_primitive.c; sourceTree = "<group>"; };
 		737815DBCADD88CD7CEBA41B /* wren_opt_random.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = wren_opt_random.c; path = ../../src/optional/wren_opt_random.c; sourceTree = "<group>"; };
 		7BB4B776AC98AF68BFB0E5B6 /* wren_opcodes.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = wren_opcodes.h; path = ../../src/vm/wren_opcodes.h; sourceTree = "<group>"; };
+		80BCD9B0D74A4422AFC357F0 /* wren_math.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = wren_math.h; path = ../../src/vm/wren_math.h; sourceTree = "<group>"; };
 		89E69C5EA0F937909115329E /* libwren.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; name = libwren.dylib; path = libwren.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
 		8BA7E8EEE2355360BAAE672E /* wren_core.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = wren_core.h; path = ../../src/vm/wren_core.h; sourceTree = "<group>"; };
 		A24154A4F8CEBF16D147D2E4 /* wren_core.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = wren_core.c; path = ../../src/vm/wren_core.c; sourceTree = "<group>"; };
@@ -83,6 +84,7 @@
 				8BA7E8EEE2355360BAAE672E /* wren_core.h */,
 				39C26800695436F244617640 /* wren_debug.c */,
 				44AC34EA743E03DC4F4B432A /* wren_debug.h */,
+				80BCD9B0D74A4422AFC357F0 /* wren_math.h */,
 				7BB4B776AC98AF68BFB0E5B6 /* wren_opcodes.h */,
 				6F616124E0840216964AAF64 /* wren_primitive.c */,
 				FCC7D88E6DEA798023B126CE /* wren_primitive.h */,

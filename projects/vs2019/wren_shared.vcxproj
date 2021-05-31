@@ -268,6 +268,7 @@
     <ClInclude Include="..\..\src\vm\wren_compiler.h" />
     <ClInclude Include="..\..\src\vm\wren_core.h" />
     <ClInclude Include="..\..\src\vm\wren_debug.h" />
+    <ClInclude Include="..\..\src\vm\wren_math.h" />
     <ClInclude Include="..\..\src\vm\wren_opcodes.h" />
     <ClInclude Include="..\..\src\vm\wren_primitive.h" />
     <ClInclude Include="..\..\src\vm\wren_utils.h" />

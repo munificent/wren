@@ -95,8 +95,6 @@ ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -g -std=c99
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -g
 ALL_LDFLAGS += $(LDFLAGS)
 
-else
-  $(error "invalid configuration $(config)")
 endif
 
 # Per File Configurations
@@ -106,8 +104,18 @@ endif
 # File sets
 # #############################################
 
+GENERATED :=
 OBJECTS :=
 
+GENERATED += $(OBJDIR)/wren_compiler.o
+GENERATED += $(OBJDIR)/wren_core.o
+GENERATED += $(OBJDIR)/wren_debug.o
+GENERATED += $(OBJDIR)/wren_opt_meta.o
+GENERATED += $(OBJDIR)/wren_opt_random.o
+GENERATED += $(OBJDIR)/wren_primitive.o
+GENERATED += $(OBJDIR)/wren_utils.o
+GENERATED += $(OBJDIR)/wren_value.o
+GENERATED += $(OBJDIR)/wren_vm.o
 OBJECTS += $(OBJDIR)/wren_compiler.o
 OBJECTS += $(OBJDIR)/wren_core.o
 OBJECTS += $(OBJDIR)/wren_debug.o
@@ -124,7 +132,7 @@ OBJECTS += $(OBJDIR)/wren_vm.o
 all: $(TARGET)
 	@:
 
-$(TARGET): $(OBJECTS) $(LDDEPS) | $(TARGETDIR)
+$(TARGET): $(GENERATED) $(OBJECTS) $(LDDEPS) | $(TARGETDIR)
 	$(PRELINKCMDS)
 	@echo Linking wren
 	$(SILENT) $(LINKCMD)
@@ -150,9 +158,11 @@ clean:
 	@echo Cleaning wren
 ifeq (posix,$(SHELLTYPE))
 	$(SILENT) rm -f  $(TARGET)
+	$(SILENT) rm -rf $(GENERATED)
 	$(SILENT) rm -rf $(OBJDIR)
 else
 	$(SILENT) if exist $(subst /,\\,$(TARGET)) del $(subst /,\\,$(TARGET))
+	$(SILENT) if exist $(subst /,\\,$(GENERATED)) rmdir /s /q $(subst /,\\,$(GENERATED))
 	$(SILENT) if exist $(subst /,\\,$(OBJDIR)) rmdir /s /q $(subst /,\\,$(OBJDIR))
 endif
 
