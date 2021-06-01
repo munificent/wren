@@ -743,20 +743,38 @@ static int readHexDigit(Parser* parser)
   return -1;
 }
 
+static int readOctDigit(Parser* parser)
+{
+  char c = nextChar(parser);
+  if (c >= '0' && c <= '7') return c - '0';
+
+  parser->currentChar--;
+  return -1;
+}
+
+static int readBinDigit(Parser* parser)
+{
+  char c = nextChar(parser);
+  if (c == '0') return 0;
+  else if (c == '1') return 1;
+
+  parser->currentChar--;
+  return -1;
+}
+
 // Parses the numeric value of the current token.
-static void makeNumber(Parser* parser, bool isHex)
+static void makeNumber(Parser* parser, bool isDeci, int base)
 {
   errno = 0;
 
-  if (isHex)
-  {
-    parser->next.value = NUM_VAL((double)strtoll(parser->tokenStart, NULL, 16));
-  }
-  else
+  if (isDeci)
   {
     parser->next.value = NUM_VAL(strtod(parser->tokenStart, NULL));
   }
-  
+  else
+  {
+    parser->next.value = NUM_VAL((double)strtoll(parser->tokenStart + 2, NULL, base));
+  }
   if (errno == ERANGE)
   {
     lexError(parser, "Number literal was too large (%d).", sizeof(long int));
@@ -778,7 +796,25 @@ static void readHexNumber(Parser* parser)
   // Iterate over all the valid hexadecimal digits found.
   while (readHexDigit(parser) != -1) continue;
 
-  makeNumber(parser, true);
+  makeNumber(parser, false, 16);
+}
+
+static void readOctNumber(Parser* parser)
+{
+  // Skip past the `o` used to denote an octal literal.
+  nextChar(parser);
+
+  while(readOctDigit(parser) != -1) continue;
+  makeNumber(parser, false, 8);
+}
+
+static void readBinNumber(Parser* parser)
+{
+  // Skip past the `b` used to denote an binary literal.
+  nextChar(parser);
+
+  while(readBinDigit(parser) != -1) continue;
+  makeNumber(parser, false, 2);
 }
 
 // Finishes lexing a number literal.
@@ -811,7 +847,7 @@ static void readNumber(Parser* parser)
     while (isDigit(peekChar(parser))) nextChar(parser);
   }
 
-  makeNumber(parser, false);
+  makeNumber(parser, true, 10);
 }
 
 // Finishes lexing an identifier. Handles reserved words.
@@ -1194,10 +1230,17 @@ static void nextToken(Parser* parser)
         return;
 
       case '0':
-        if (peekChar(parser) == 'x')
+        switch (peekChar(parser))
         {
-          readHexNumber(parser);
-          return;
+          case 'x':
+            readHexNumber(parser);
+            return;
+          case 'o':
+            readOctNumber(parser);
+            return;
+          case 'b':
+            readBinNumber(parser);
+            return;
         }
 
         readNumber(parser);
