@@ -43,11 +43,37 @@ static void initObj(WrenVM* vm, Obj* obj, ObjType type, ObjClass* classObj)
   vm->first = obj;
 }
 
-ObjClass* wrenNewSingleClass(WrenVM* vm, int numFields, ObjString* name)
+Value wrenNewMemorySegment(WrenVM* vm, ObjType type, ObjClass* classObj,
+                           size_t fieldsSize, size_t dataSize)
+{
+  const size_t size = sizeof(ObjMemorySegment) +
+                      sizeof(Value) * fieldsSize +
+                      dataSize;
+
+  ObjMemorySegment* ms = (ObjMemorySegment*)wrenReallocate(vm, NULL, 0, size);
+  initObj(vm, &ms->obj, type, classObj);
+
+  ms->fieldsSize = fieldsSize;
+  ms->dataSize = dataSize;
+
+  // Initialize fields to null.
+  for (size_t i = 0; i < fieldsSize; i++)
+  {
+    ms->fields[i] = NULL_VAL;
+  }
+
+  memset(wrenMemorySegmentData(ms), 0, dataSize);
+
+  return OBJ_VAL(ms);
+}
+
+ObjClass* wrenNewSingleClass(WrenVM* vm, bool isForeign, int numFields,
+                             ObjString* name)
 {
   ObjClass* classObj = ALLOCATE(vm, ObjClass);
   initObj(vm, &classObj->obj, OBJ_CLASS, NULL);
   classObj->superclass = NULL;
+  classObj->isForeign = isForeign;
   classObj->numFields = numFields;
   classObj->name = name;
   classObj->attributes = NULL_VAL;
@@ -66,15 +92,7 @@ void wrenBindSuperclass(WrenVM* vm, ObjClass* subclass, ObjClass* superclass)
   subclass->superclass = superclass;
 
   // Include the superclass in the total number of fields.
-  if (subclass->numFields != -1)
-  {
-    subclass->numFields += superclass->numFields;
-  }
-  else
-  {
-    ASSERT(superclass->numFields == 0,
-           "A foreign class cannot inherit from a class with fields.");
-  }
+  subclass->numFields += superclass->numFields;
 
   // Inherit methods from its superclass.
   for (int i = 0; i < superclass->methods.count; i++)
@@ -83,14 +101,15 @@ void wrenBindSuperclass(WrenVM* vm, ObjClass* subclass, ObjClass* superclass)
   }
 }
 
-ObjClass* wrenNewClass(WrenVM* vm, ObjClass* superclass, int numFields,
-                       ObjString* name)
+ObjClass* wrenNewClass(WrenVM* vm, ObjClass* superclass, bool isForeign,
+                       int numFields, ObjString* name)
 {
   // Create the metaclass.
   Value metaclassName = wrenStringFormat(vm, "@ metaclass", OBJ_VAL(name));
   wrenPushRoot(vm, AS_OBJ(metaclassName));
 
-  ObjClass* metaclass = wrenNewSingleClass(vm, 0, AS_STRING(metaclassName));
+  ObjClass* metaclass = wrenNewSingleClass(vm, isForeign, 0,
+                                           AS_STRING(metaclassName));
   metaclass->obj.classObj = vm->classClass;
 
   wrenPopRoot(vm);
@@ -102,7 +121,7 @@ ObjClass* wrenNewClass(WrenVM* vm, ObjClass* superclass, int numFields,
   // hierarchy.
   wrenBindSuperclass(vm, metaclass, vm->classClass);
 
-  ObjClass* classObj = wrenNewSingleClass(vm, numFields, name);
+  ObjClass* classObj = wrenNewSingleClass(vm, isForeign, numFields, name);
 
   // Make sure the class isn't collected while the inherited methods are being
   // bound.
@@ -231,14 +250,10 @@ void wrenEnsureStack(WrenVM* vm, ObjFiber* fiber, int needed)
   }
 }
 
-ObjForeign* wrenNewForeign(WrenVM* vm, ObjClass* classObj, size_t size)
+ObjMemorySegment* wrenNewForeign(WrenVM* vm, ObjClass* classObj, size_t size)
 {
-  ObjForeign* object = ALLOCATE_FLEX(vm, ObjForeign, uint8_t, size);
-  initObj(vm, &object->obj, OBJ_FOREIGN, classObj);
-
-  // Zero out the bytes.
-  memset(object->data, 0, size);
-  return object;
+  Value value = wrenNewMemorySegment(vm, OBJ_FOREIGN, classObj, classObj->numFields, size);
+  return AS_MEMORYSEGMENT(value);
 }
 
 ObjFn* wrenNewFunction(WrenVM* vm, ObjModule* module, int maxSlots)
@@ -270,17 +285,8 @@ void wrenFunctionBindName(WrenVM* vm, ObjFn* fn, const char* name, int length)
 
 Value wrenNewInstance(WrenVM* vm, ObjClass* classObj)
 {
-  ObjInstance* instance = ALLOCATE_FLEX(vm, ObjInstance,
-                                        Value, classObj->numFields);
-  initObj(vm, &instance->obj, OBJ_INSTANCE, classObj);
-
-  // Initialize fields to null.
-  for (int i = 0; i < classObj->numFields; i++)
-  {
-    instance->fields[i] = NULL_VAL;
-  }
-
-  return OBJ_VAL(instance);
+  return wrenNewMemorySegment(vm, OBJ_INSTANCE,
+                              classObj, classObj->numFields, 0);
 }
 
 ObjList* wrenNewList(WrenVM* vm, uint32_t numElements)
@@ -1002,12 +1008,32 @@ void wrenGrayValue(WrenVM* vm, Value value)
   wrenGrayObj(vm, AS_OBJ(value));
 }
 
+void wrenGrayValues(WrenVM* vm, Value* values, size_t size)
+{
+  for (size_t i = 0; i < size; i++)
+  {
+    wrenGrayValue(vm, values[i]);
+  }
+}
+
+
 void wrenGrayBuffer(WrenVM* vm, ValueBuffer* buffer)
 {
-  for (int i = 0; i < buffer->count; i++)
+  wrenGrayValues(vm, buffer->data, buffer->count);
+}
+
+static void blackenMemorySegment(WrenVM* vm, ObjMemorySegment* ms)
+{
+  wrenGrayObj(vm, (Obj*)ms->obj.classObj);
+
+  // Mark the fields.
+  for (size_t i = 0; i < ms->fieldsSize; i++)
   {
-    wrenGrayValue(vm, buffer->data[i]);
+    wrenGrayValue(vm, ms->fields[i]);
   }
+
+  // Keep track of how much memory is still in use.
+  vm->bytesAllocated += wrenMemorySegmentAllocatedSize(ms);
 }
 
 static void blackenClass(WrenVM* vm, ObjClass* classObj)
@@ -1061,10 +1087,7 @@ static void blackenFiber(WrenVM* vm, ObjFiber* fiber)
   }
 
   // Stack variables.
-  for (Value* slot = fiber->stack; slot < fiber->stackTop; slot++)
-  {
-    wrenGrayValue(vm, *slot);
-  }
+  wrenGrayValues(vm, fiber->stack, fiber->stackTop - fiber->stack);
 
   // Open upvalues.
   ObjUpvalue* upvalue = fiber->openUpvalues;
@@ -1099,30 +1122,6 @@ static void blackenFn(WrenVM* vm, ObjFn* fn)
   // TODO: What about the function name?
 }
 
-static void blackenForeign(WrenVM* vm, ObjForeign* foreign)
-{
-  // TODO: Keep track of how much memory the foreign object uses. We can store
-  // this in each foreign object, but it will balloon the size. We may not want
-  // that much overhead. One option would be to let the foreign class register
-  // a C function that returns a size for the object. That way the VM doesn't
-  // always have to explicitly store it.
-}
-
-static void blackenInstance(WrenVM* vm, ObjInstance* instance)
-{
-  wrenGrayObj(vm, (Obj*)instance->obj.classObj);
-
-  // Mark the fields.
-  for (int i = 0; i < instance->obj.classObj->numFields; i++)
-  {
-    wrenGrayValue(vm, instance->fields[i]);
-  }
-
-  // Keep track of how much memory is still in use.
-  vm->bytesAllocated += sizeof(ObjInstance);
-  vm->bytesAllocated += sizeof(Value) * instance->obj.classObj->numFields;
-}
-
 static void blackenList(WrenVM* vm, ObjList* list)
 {
   // Mark the elements.
@@ -1153,10 +1152,7 @@ static void blackenMap(WrenVM* vm, ObjMap* map)
 static void blackenModule(WrenVM* vm, ObjModule* module)
 {
   // Top-level variables.
-  for (int i = 0; i < module->variables.count; i++)
-  {
-    wrenGrayValue(vm, module->variables.data[i]);
-  }
+  wrenGrayBuffer(vm, &module->variables);
 
   wrenBlackenSymbolTable(vm, &module->variableNames);
 
@@ -1202,8 +1198,8 @@ static void blackenObject(WrenVM* vm, Obj* obj)
     case OBJ_CLOSURE:  blackenClosure( vm, (ObjClosure*) obj); break;
     case OBJ_FIBER:    blackenFiber(   vm, (ObjFiber*)   obj); break;
     case OBJ_FN:       blackenFn(      vm, (ObjFn*)      obj); break;
-    case OBJ_FOREIGN:  blackenForeign( vm, (ObjForeign*) obj); break;
-    case OBJ_INSTANCE: blackenInstance(vm, (ObjInstance*)obj); break;
+    case OBJ_FOREIGN:
+    case OBJ_INSTANCE: blackenMemorySegment(vm, (ObjMemorySegment*)obj); break;
     case OBJ_LIST:     blackenList(    vm, (ObjList*)    obj); break;
     case OBJ_MAP:      blackenMap(     vm, (ObjMap*)     obj); break;
     case OBJ_MODULE:   blackenModule(  vm, (ObjModule*)  obj); break;
@@ -1257,7 +1253,7 @@ void wrenFreeObj(WrenVM* vm, Obj* obj)
     }
 
     case OBJ_FOREIGN:
-      wrenFinalizeForeign(vm, (ObjForeign*)obj);
+      wrenFinalizeForeign(vm, (ObjMemorySegment*)obj);
       break;
 
     case OBJ_LIST:

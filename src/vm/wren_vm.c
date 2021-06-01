@@ -505,7 +505,7 @@ static ObjClosure* compileInModule(WrenVM* vm, Value name, const char* source,
 // If successful, returns `null`. Otherwise, returns a string for the runtime
 // error message.
 static Value validateSuperclass(WrenVM* vm, Value name, Value superclassValue,
-                                int numFields)
+                                bool isForeign, int numFields)
 {
   // Make sure the superclass is a class.
   if (!IS_CLASS(superclassValue))
@@ -535,14 +535,14 @@ static Value validateSuperclass(WrenVM* vm, Value name, Value superclassValue,
         name, OBJ_VAL(superclass->name));
   }
 
-  if (superclass->numFields == -1)
+  if (!isForeign && superclass->isForeign)
   {
     return wrenStringFormat(vm,
         "Class '@' cannot inherit from foreign class '@'.",
         name, OBJ_VAL(superclass->name));
   }
 
-  if (numFields == -1 && superclass->numFields > 0)
+  if (isForeign && !superclass->isForeign && superclass->numFields > 0)
   {
     return wrenStringFormat(vm,
         "Foreign class '@' may not inherit from a class with fields.",
@@ -630,12 +630,12 @@ static void endClass(WrenVM* vm)
 
 // Creates a new class.
 //
-// If [numFields] is -1, the class is a foreign class. The name and superclass
-// should be on top of the fiber's stack. After calling this, the top of the
-// stack will contain the new class.
+// The name and superclass should be on top of the fiber's stack.
+// After calling this, the top of the stack will contain the new class.
 //
 // Aborts the current fiber if an error occurs.
-static void createClass(WrenVM* vm, int numFields, ObjModule* module)
+static void createClass(WrenVM* vm, bool isForeign, int numFields,
+                        ObjModule* module)
 {
   // Pull the name and superclass off the stack.
   Value name = vm->fiber->stackTop[-2];
@@ -645,20 +645,21 @@ static void createClass(WrenVM* vm, int numFields, ObjModule* module)
   // the other slot.
   vm->fiber->stackTop--;
 
-  vm->fiber->error = validateSuperclass(vm, name, superclass, numFields);
+  vm->fiber->error = validateSuperclass(vm, name, superclass, isForeign,
+                                        numFields);
   if (wrenHasError(vm->fiber)) return;
 
-  ObjClass* classObj = wrenNewClass(vm, AS_CLASS(superclass), numFields,
-                                    AS_STRING(name));
+  ObjClass* classObj = wrenNewClass(vm, AS_CLASS(superclass), isForeign,
+                                    numFields, AS_STRING(name));
   vm->fiber->stackTop[-1] = OBJ_VAL(classObj);
 
-  if (numFields == -1) bindForeignClass(vm, classObj, module);
+  if (isForeign) bindForeignClass(vm, classObj, module);
 }
 
 static void createForeign(WrenVM* vm, ObjFiber* fiber, Value* stack)
 {
   ObjClass* classObj = AS_CLASS(stack[0]);
-  ASSERT(classObj->numFields == -1, "Class must be a foreign class.");
+  ASSERT(classObj->isForeign, "Class must be a foreign class.");
 
   // TODO: Don't look up every time.
   int symbol = wrenSymbolTableFind(&vm->methodNames, "<allocate>", 10);
@@ -677,7 +678,7 @@ static void createForeign(WrenVM* vm, ObjFiber* fiber, Value* stack)
   vm->apiStack = NULL;
 }
 
-void wrenFinalizeForeign(WrenVM* vm, ObjForeign* foreign)
+void wrenFinalizeForeign(WrenVM* vm, ObjMemorySegment* foreign)
 {
   // TODO: Don't look up every time.
   int symbol = wrenSymbolTableFind(&vm->methodNames, "<finalize>", 10);
@@ -696,7 +697,7 @@ void wrenFinalizeForeign(WrenVM* vm, ObjForeign* foreign)
   ASSERT(method->type == METHOD_FOREIGN, "Finalizer should be foreign.");
 
   WrenFinalizerFn finalizer = (WrenFinalizerFn)method->as.foreign;
-  finalizer(foreign->data);
+  finalizer(wrenMemorySegmentData(foreign));
 }
 
 // Let the host resolve an imported module name if it wants to.
@@ -942,10 +943,9 @@ static WrenInterpretResult runInterpreter(WrenVM* vm, register ObjFiber* fiber)
     {
       uint8_t field = READ_BYTE();
       Value receiver = stackStart[0];
-      ASSERT(IS_INSTANCE(receiver), "Receiver should be instance.");
-      ObjInstance* instance = AS_INSTANCE(receiver);
-      ASSERT(field < instance->obj.classObj->numFields, "Out of bounds field.");
-      PUSH(instance->fields[field]);
+      ASSERT(IS_MEMORYSEGMENT(receiver), "Receiver should be a memory segment.");
+      ObjMemorySegment* ms = AS_MEMORYSEGMENT(receiver);
+      PUSH(*wrenMemorySegmentAt(ms, field));
       DISPATCH();
     }
 
@@ -1117,10 +1117,9 @@ static WrenInterpretResult runInterpreter(WrenVM* vm, register ObjFiber* fiber)
     {
       uint8_t field = READ_BYTE();
       Value receiver = stackStart[0];
-      ASSERT(IS_INSTANCE(receiver), "Receiver should be instance.");
-      ObjInstance* instance = AS_INSTANCE(receiver);
-      ASSERT(field < instance->obj.classObj->numFields, "Out of bounds field.");
-      instance->fields[field] = PEEK();
+      ASSERT(IS_MEMORYSEGMENT(receiver), "Receiver should be a memory segment.");
+      ObjMemorySegment* ms = AS_MEMORYSEGMENT(receiver);
+      *wrenMemorySegmentAt(ms, field) = PEEK();
       DISPATCH();
     }
 
@@ -1128,10 +1127,9 @@ static WrenInterpretResult runInterpreter(WrenVM* vm, register ObjFiber* fiber)
     {
       uint8_t field = READ_BYTE();
       Value receiver = POP();
-      ASSERT(IS_INSTANCE(receiver), "Receiver should be instance.");
-      ObjInstance* instance = AS_INSTANCE(receiver);
-      ASSERT(field < instance->obj.classObj->numFields, "Out of bounds field.");
-      PUSH(instance->fields[field]);
+      ASSERT(IS_MEMORYSEGMENT(receiver), "Receiver should be a memory segment.");
+      ObjMemorySegment* ms = AS_MEMORYSEGMENT(receiver);
+      PUSH(*wrenMemorySegmentAt(ms, field));
       DISPATCH();
     }
 
@@ -1139,10 +1137,9 @@ static WrenInterpretResult runInterpreter(WrenVM* vm, register ObjFiber* fiber)
     {
       uint8_t field = READ_BYTE();
       Value receiver = POP();
-      ASSERT(IS_INSTANCE(receiver), "Receiver should be instance.");
-      ObjInstance* instance = AS_INSTANCE(receiver);
-      ASSERT(field < instance->obj.classObj->numFields, "Out of bounds field.");
-      instance->fields[field] = PEEK();
+      ASSERT(IS_MEMORYSEGMENT(receiver), "Receiver should be a memory segment.");
+      ObjMemorySegment* ms = AS_MEMORYSEGMENT(receiver);
+      *wrenMemorySegmentAt(ms, field) = PEEK();
       DISPATCH();
     }
 
@@ -1304,14 +1301,14 @@ static WrenInterpretResult runInterpreter(WrenVM* vm, register ObjFiber* fiber)
 
     CASE_CODE(CLASS):
     {
-      createClass(vm, READ_BYTE(), NULL);
+      createClass(vm, false, READ_BYTE(), NULL);
       if (wrenHasError(fiber)) RUNTIME_ERROR();
       DISPATCH();
     }
 
     CASE_CODE(FOREIGN_CLASS):
     {
-      createClass(vm, -1, fn->module);
+      createClass(vm, true, READ_BYTE(), fn->module);
       if (wrenHasError(fiber)) RUNTIME_ERROR();
       DISPATCH();
     }
@@ -1705,7 +1702,7 @@ void* wrenGetSlotForeign(WrenVM* vm, int slot)
   ASSERT(IS_FOREIGN(vm->apiStack[slot]),
          "Slot must hold a foreign instance.");
 
-  return AS_FOREIGN(vm->apiStack[slot])->data;
+  return wrenMemorySegmentData(AS_MEMORYSEGMENT(vm->apiStack[slot]));
 }
 
 const char* wrenGetSlotString(WrenVM* vm, int slot)
@@ -1752,12 +1749,12 @@ void* wrenSetSlotNewForeign(WrenVM* vm, int slot, int classSlot, size_t size)
   ASSERT(IS_CLASS(vm->apiStack[classSlot]), "Slot must hold a class.");
   
   ObjClass* classObj = AS_CLASS(vm->apiStack[classSlot]);
-  ASSERT(classObj->numFields == -1, "Class must be a foreign class.");
+  ASSERT(classObj->isForeign, "Class must be a foreign class.");
   
-  ObjForeign* foreign = wrenNewForeign(vm, classObj, size);
+  ObjMemorySegment* foreign = wrenNewForeign(vm, classObj, size);
   vm->apiStack[slot] = OBJ_VAL(foreign);
   
-  return (void*)foreign->data;
+  return (void*)wrenMemorySegmentData(foreign);
 }
 
 void wrenSetSlotNewList(WrenVM* vm, int slot)
