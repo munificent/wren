@@ -875,6 +875,28 @@ static int readHexEscape(Parser* parser, int digits, const char* description)
   return value;
 }
 
+static uint8_t readOctalEscape(Parser *parser, char c) {
+  int value = c - '0';
+  // Octal escapes can be at most 3 digits.
+  for (int i = 0; i < 2; i++)
+  {
+    c = peekChar(parser);
+    if (c >= '0' && c < '8')
+    {
+      value = value * 8 + nextChar(parser) - '0';
+    }
+    else break;
+  }
+
+  // Octal escapes must fit in a byte.
+  if (value > 255)
+  {
+    lexError(parser, "Invalid octal escape sequence.");
+    return 0;
+  }
+  return (uint8_t)value;
+}
+
 // Reads a hex digit Unicode escape sequence in a string literal.
 static void readUnicodeEscape(Parser* parser, ByteBuffer* string, int length)
 {
@@ -1012,7 +1034,6 @@ static void readString(Parser* parser)
         case '"':  wrenByteBufferWrite(parser->vm, &string, '"'); break;
         case '\\': wrenByteBufferWrite(parser->vm, &string, '\\'); break;
         case '%':  wrenByteBufferWrite(parser->vm, &string, '%'); break;
-        case '0':  wrenByteBufferWrite(parser->vm, &string, '\0'); break;
         case 'a':  wrenByteBufferWrite(parser->vm, &string, '\a'); break;
         case 'b':  wrenByteBufferWrite(parser->vm, &string, '\b'); break;
         case 'e':  wrenByteBufferWrite(parser->vm, &string, '\33'); break;
@@ -1029,8 +1050,13 @@ static void readString(Parser* parser)
           break;
 
         default:
-          lexError(parser, "Invalid escape character '%c'.",
-                   *(parser->currentChar - 1));
+          c = *(parser->currentChar - 1);
+          if (c >= '0' && c < '8') {
+            wrenByteBufferWrite(parser->vm, &string,
+                                readOctalEscape(parser, c));
+            break;
+          }
+          lexError(parser, "Invalid escape character '%c'.", c);
           break;
       }
     }
