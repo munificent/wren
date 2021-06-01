@@ -331,8 +331,11 @@ WrenForeignMethodFn bindForeignMethod(WrenVM* vm, const char* module,
 </pre>
 
 When Wren calls this, we look at the class and method name to figure out which
-method it's binding, and then return a pointer to the appropriate function. The
-foreign method for writing to the file is:
+method it's binding, and then return a pointer to the appropriate function.
+
+### Implementing the foreign methods
+
+The foreign method for writing to the file is:
 
 <pre class="snippet" data-lang="c">
 void fileWrite(WrenVM* vm)
@@ -361,6 +364,12 @@ pointer.
 We do a little sanity checking to make sure the user isn't writing to a file
 they already closed. If not, we call `fwrite()` to write to the file.
 
+If the file is already closed (`*file == NULL`), we abort the current
+fiber.  We put the error message into slot 0 using `wrenSetSlotString()`,
+then abort the fiber using `wrenAbortFiber()`.  The `0` given to
+`wrenAbortFiber()` tells Wren to pull the error message from slot 0.
+(See [Handling runtime errors][] for details on error handling.)
+
 The other method is `close()` to let them explicitly close the file:
 
 <pre class="snippet" data-lang="c">
@@ -387,3 +396,5 @@ code.
 
 <a class="right" href="configuring-the-vm.html">Configuring the VM &rarr;</a>
 <a href="calling-c-from-wren.html">&larr; Calling C from Wren</a>
+
+[Handling runtime errors]: ../error-handling.html#handling-runtime-errors
