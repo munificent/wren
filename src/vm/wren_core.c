@@ -1,7 +1,5 @@
 #include <ctype.h>
-#include <errno.h>
 #include <float.h>
-#include <math.h>
 #include <string.h>
 #include <time.h>
 
@@ -614,20 +612,21 @@ DEF_PRIMITIVE(num_fromString)
   // Corner case: Can't parse an empty string.
   if (string->length == 0) RETURN_NULL;
 
-  errno = 0;
-  char* end;
-  double number = strtod(string->value, &end);
+  char* end = string->value;
 
-  // Skip past any trailing whitespace.
-  while (*end != '\0' && isspace((unsigned char)*end)) end++;
+  // Skip leading whitespace.
+  while(isspace(*end)) end++;
 
-  if (errno == ERANGE) RETURN_ERROR("Number literal is too large.");
-
-  // We must have consumed the entire string. Otherwise, it contains non-number
-  // characters and we can't parse it.
-  if (end < string->value + string->length) RETURN_NULL;
-
-  RETURN_NUM(number);
+  wrenParseNumResults results;
+  wrenParseNum(end, 0, &results);
+  end += results.consumed;
+  if (results.errorMessage == NULL)
+  {
+    while(isspace(*end)) end++;
+    if( end < string->value + string->length) RETURN_NULL;
+    RETURN_NUM(results.value);
+  }
+  RETURN_NULL;
 }
 
 // Defines a primitive on Num that calls infix [op] and returns [type].

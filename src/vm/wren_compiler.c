@@ -1,4 +1,3 @@
-#include <errno.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
@@ -743,75 +742,23 @@ static int readHexDigit(Parser* parser)
   return -1;
 }
 
-// Parses the numeric value of the current token.
-static void makeNumber(Parser* parser, bool isHex)
+// Parses a number token.
+static void readNumber(Parser* parser)
 {
-  errno = 0;
-
-  if (isHex)
+  wrenParseNumResults results;
+  wrenParseNum(parser->currentChar, 0, &results);
+  if (results.errorMessage == NULL)
   {
-    parser->next.value = NUM_VAL((double)strtoll(parser->tokenStart, NULL, 16));
+    parser->currentChar += results.consumed;
+    parser->next.value = NUM_VAL(results.value);
+    makeToken(parser, TOKEN_NUMBER);
   }
   else
   {
-    parser->next.value = NUM_VAL(strtod(parser->tokenStart, NULL));
-  }
-  
-  if (errno == ERANGE)
-  {
-    lexError(parser, "Number literal was too large (%d).", sizeof(long int));
+    parser->currentChar += results.consumed;
     parser->next.value = NUM_VAL(0);
+    lexError(parser, results.errorMessage);
   }
-  
-  // We don't check that the entire token is consumed after calling strtoll()
-  // or strtod() because we've already scanned it ourselves and know it's valid.
-
-  makeToken(parser, TOKEN_NUMBER);
-}
-
-// Finishes lexing a hexadecimal number literal.
-static void readHexNumber(Parser* parser)
-{
-  // Skip past the `x` used to denote a hexadecimal literal.
-  nextChar(parser);
-
-  // Iterate over all the valid hexadecimal digits found.
-  while (readHexDigit(parser) != -1) continue;
-
-  makeNumber(parser, true);
-}
-
-// Finishes lexing a number literal.
-static void readNumber(Parser* parser)
-{
-  while (isDigit(peekChar(parser))) nextChar(parser);
-
-  // See if it has a floating point. Make sure there is a digit after the "."
-  // so we don't get confused by method calls on number literals.
-  if (peekChar(parser) == '.' && isDigit(peekNextChar(parser)))
-  {
-    nextChar(parser);
-    while (isDigit(peekChar(parser))) nextChar(parser);
-  }
-
-  // See if the number is in scientific notation.
-  if (matchChar(parser, 'e') || matchChar(parser, 'E'))
-  {
-    // Allow a single positive/negative exponent symbol.
-    if(!matchChar(parser, '+'))
-    {
-      matchChar(parser, '-');
-    }
-
-    if (!isDigit(peekChar(parser)))
-    {
-      lexError(parser, "Unterminated scientific notation.");
-    }
-
-    while (isDigit(peekChar(parser))) nextChar(parser);
-  }
-
-  makeNumber(parser, false);
 }
 
 // Finishes lexing an identifier. Handles reserved words.
@@ -1192,17 +1139,6 @@ static void nextToken(Parser* parser)
         readName(parser,
                  peekChar(parser) == '_' ? TOKEN_STATIC_FIELD : TOKEN_FIELD, c);
         return;
-
-      case '0':
-        if (peekChar(parser) == 'x')
-        {
-          readHexNumber(parser);
-          return;
-        }
-
-        readNumber(parser);
-        return;
-
       default:
         if (isName(c))
         {
@@ -1210,6 +1146,7 @@ static void nextToken(Parser* parser)
         }
         else if (isDigit(c))
         {
+          parser->currentChar--;
           readNumber(parser);
         }
         else
