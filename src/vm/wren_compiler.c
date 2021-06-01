@@ -3503,6 +3503,18 @@ static bool method(Compiler* compiler, Variable classVariable)
     int constructorSymbol = signatureSymbol(compiler, &signature);
     
     createConstructor(compiler, &signature, methodSymbol);
+
+    // Declare the constructor so we err if we have a static method
+    // and a constructor with the same signature.
+    // The declareMethod() function relies on [inStatic] to tell if
+    // we're compiling a static method and we need to treat the
+    // constructor as static method.
+    compiler->enclosingClass->inStatic = true;
+    int length;
+    signatureToString(&signature, fullSignature, &length);
+    declareMethod(compiler, &signature, fullSignature, length);
+    compiler->enclosingClass->inStatic = false;
+
     defineMethod(compiler, classVariable, true, constructorSymbol);
   }
 
