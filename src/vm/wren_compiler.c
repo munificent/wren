@@ -1029,8 +1029,19 @@ static void readString(Parser* parser)
           break;
 
         default:
-          lexError(parser, "Invalid escape character '%c'.",
-                   *(parser->currentChar - 1));
+          c = *(parser->currentChar - 1);
+          if (c >= 32 && c <= 126)
+          {
+            lexError(parser, "Invalid escape character '%c'.", c);
+          }
+          else
+          {
+            // Don't show non-ASCII values since we didn't UTF-8 decode the
+            // bytes. Since there are no non-ASCII byte values that are
+            // meaningful escape sequences in Wren, the lexer works on raw 
+            // bytes, even though the source code and console output are UTF-8.
+            lexError(parser, "Invalid byte 0x%x in escape sequence.", (uint8_t)c);
+          }
           break;
       }
     }
