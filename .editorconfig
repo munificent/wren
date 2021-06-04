@@ -1,0 +1,10 @@
+# https://EditorConfig.org
+
+root = true
+
+[*]
+indent_style = space
+
+[*.{h,c,wren,lua,rb,dart,sh,yml,py}]
+indent_size = 2
+
