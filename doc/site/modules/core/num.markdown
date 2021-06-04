@@ -2,12 +2,15 @@
 
 ## Static Methods
 
-### Num.**fromString**(value)
+### Num.**fromString**(value[, base])
 
 Attempts to parse `value` as a decimal literal and return it as an instance of
-`Num`. If the number cannot be parsed `null` will be returned.
+`Num`. Optionally, `base` can be set to use a specific radix between `2` 
+and `36` (or `0` to choose radix automatically). If the number cannot be 
+parsed `null` will be returned.
 
-It is a runtime error if `value` is not a string.
+It is a runtime error if `value` is not a string, `base` is set and is not an 
+integer, `base` is above `36`, or `base` is lower than `2` and not `0`.
 
 ### Num.**infinity**
 

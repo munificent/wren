@@ -1,4 +1,8 @@
 #include <string.h>
+#include <ctype.h>
+#include <float.h>
+#include <math.h>
+#include <stdio.h>
 
 #include "wren_utils.h"
 #include "wren_vm.h"
@@ -204,4 +208,236 @@ uint32_t wrenValidateIndex(uint32_t count, int64_t value)
   if (value >= 0 && value < count) return (uint32_t)value;
 
   return UINT32_MAX;
+}
+
+// MaxMantissaDigits is the maximum amount of digits that can be preserved in
+// the mantissa of a float64 per base. Bases that are greater than 36 or less
+// than 2 are invalid. The values are found by `ceil(log[base](2^53 - 1))`.
+int static const maxMantissaDigits[] = {
+    /* 2*/ 53, /* 3*/ 34, /* 4*/ 27, /* 5*/ 23, /* 6*/ 21, /* 7*/ 19, /* 8*/ 18,
+    /* 9*/ 17, /*10*/ 16, /*11*/ 16, /*12*/ 15, /*13*/ 15, /*14*/ 14, /*15*/ 14,
+    /*16*/ 14, /*17*/ 13, /*18*/ 13, /*19*/ 13, /*20*/ 13, /*21*/ 13, /*22*/ 12,
+    /*23*/ 12, /*24*/ 12, /*25*/ 12, /*26*/ 12, /*27*/ 12, /*28*/ 12, /*29*/ 11,
+    /*30*/ 11, /*31*/ 11, /*32*/ 11, /*33*/ 11, /*34*/ 11, /*35*/ 11, /*36*/ 11,
+};
+
+void static wrenParseNumError(int count, const char* err,
+                                 wrenParseNumResults* results)
+{
+  results->consumed = count;
+  results->errorMessage = err;
+  results->value = 0;
+}
+
+void wrenParseNum(const char* str, int base, wrenParseNumResults* results)
+{
+  int i = 0;
+  bool hasDigits = false;
+  bool neg = false;
+  char c = str[i];
+  // A double is limited in the amount of digits it can represent exactly. We
+  // can keep a count of how many digits we have and ignore the rest when we
+  // reach our limit
+  int maxMantissa;
+
+  // Check sign.
+  if (c == '-')
+  {
+    neg = true;
+    c = str[++i];
+  }
+  else if (c == '+') c = str[++i];
+  if (base == 0)
+  {
+    // Base unset. Check for prefix or default to base 10.
+    base = 10;
+    maxMantissa = maxMantissaDigits[10 - 2];
+    if (c == '0')
+    {
+      switch (c = str[++i])
+      {
+        case 'x':
+          base = 16;
+          c = str[++i];
+          maxMantissa = maxMantissaDigits[16 - 2];
+          break;
+        case 'o':
+          base = 8;
+          c = str[++i];
+          maxMantissa = maxMantissaDigits[8 - 2];
+          break;
+        case 'b':
+          base = 2;
+          c = str[++i];
+          maxMantissa = maxMantissaDigits[2 - 2];
+          break;
+        default:
+          // this number is base 10 so treat the '0' as a digit.
+          hasDigits = true;
+      }
+    }
+  }
+  else
+  {
+    // If base is set, make sure that it is valid.
+    if (base > 36) return wrenParseNumError(i, "Base is to high.", results);
+    else if (base < 2) return wrenParseNumError(i, "Base is to low.", results);
+    // if the base may have a prefix, skip past the prefix.
+    if (c == '0')
+    {
+      c = str[++i];
+      switch (base)
+      {
+        case 16:
+          if (c == 'x') c = str[++i];
+          break;
+        case 8:
+          if (c == 'o') c = str[++i];
+          break;
+        case 2:
+          if (c == 'b') c = str[++i];
+          break;
+        default:
+          hasDigits = true;
+      }
+    }
+    maxMantissa = maxMantissaDigits[base - 2];
+  }
+
+  int e = 0;
+  long long num = 0;
+  int mantissaDigits = 0;
+  // Parse the integer part of the number.
+  for (;;)
+  {
+    int t;
+    if (isdigit(c)) t = c - '0';
+    else if (islower(c)) t = c - ('a' - 10);
+    else if (isupper(c)) t = c - ('A' - 10);
+    else if (c == '_')
+    {
+      c = str[++i];
+      continue;
+    }
+    else break;
+    if (t >= base) break;
+
+    hasDigits = true;
+    // If we have reached our quota of digits, we can ignore the rest and
+    // increment our exponent.
+    if (mantissaDigits < maxMantissa)
+    {
+      num = num * base + t;
+      if (num > 0) mantissaDigits++;
+    }
+    else if (e < INT_MAX) e++;
+    else return wrenParseNumError(i, "Too many digits.", results);
+    c = str[++i];
+  }
+
+  // Only parse the fractional and the exponential part of the number if the
+  // base is 10.
+  if (base == 10)
+  {
+    // Parse the decimal part of the number. The decimal point must be followed
+    // by a digit or else the decimal point may actually be a fuction call.
+    if (c == '.' && isdigit(str[i + 1]))
+    {
+      c = str[++i];
+      for (;;)
+      {
+        if (isdigit(c))
+        {
+          // If we have reached our quota of digits, we can ignore the rest.
+          // This time we don't need to worry about the exponent as the decimal
+          // value is too insignificant.
+          if (mantissaDigits < maxMantissa)
+          {
+            num = num * 10 + (c - '0');
+            hasDigits = true;
+            if (num > 0) mantissaDigits++;
+            if (e > INT_MIN) e--;
+            else return wrenParseNumError(i, "Too many digits.", results);
+          }
+        }
+        else if (c != '_')
+          break;
+        c = str[++i];
+      }
+    }
+
+    // We must have parsed digits from here or else this number is invalid
+    if (!hasDigits) return wrenParseNumError(i, "Number has no digits.",
+                                             results);
+
+    // Parse the exponential part of the number.
+    if (c == 'e' || c == 'E')
+    {
+      c = str[++i];
+      int expNum = 0;
+      bool expHasDigits = false;
+      bool expNeg = false;
+      // Parse exponent sign.
+      if (c == '-')
+      {
+        expNeg = true;
+        c = str[++i];
+      }
+      else if (c == '+') c = str[++i];
+      // Parse the actual exponent.
+      for (;;)
+      {
+        if (isdigit(c))
+        {
+          int t = c - '0';
+          if (expNum < INT_MAX / 10 ||
+              (expNum == INT_MAX / 10 && t <= INT_MAX % 10))
+          {
+            expNum = expNum * 10 + t;
+          }
+          else
+          {
+            if (expNeg) return wrenParseNumError(i, "Exponent is too small.",
+                                                 results);
+            return wrenParseNumError(i, "Exponent is too large.", results);
+          }
+          expHasDigits = true;
+        }
+        else if (c != '_') break;
+        c = str[++i];
+      }
+      if (!expHasDigits)
+          return wrenParseNumError(i, "Unterminated scientific literal.",
+                                   results);
+      // Before changing "e", ensure that it will not overflow.
+      if (expNeg)
+      {
+        if (e >= INT_MIN + expNum) e -= expNum;
+        else return wrenParseNumError(i, "Exponent is too small.", results);
+      }
+      else
+      {
+        if (e <= INT_MAX - expNum) e += expNum;
+        else return wrenParseNumError(i, "Exponent is too large.", results);
+      }
+    }
+  } else {
+    if (!hasDigits) return wrenParseNumError(i, "Number has no digits.",
+                                             results);
+  }
+
+  // Floating point math is often inaccurate. To get around this issue, we
+  // calculate using long doubles to preserve as much data as possible.
+  long double power = powl((long double)base, (long double)e);
+  long double result = (long double)num * power;
+  double f = (double)result;
+
+  // Check whether the number became infinity or 0 from being too big or too
+  // small.
+  if (isinf(f)) return wrenParseNumError(i, "Number is too large.", results);
+  else if (f == 0 && num != 0)
+           return wrenParseNumError(i, "Number is too small.", results);
+  results->errorMessage = NULL;
+  results->consumed = i;
+  results->value = neg ? f * -1 : f;
 }
