@@ -22,7 +22,7 @@ language](syntax.html).
     designed to be [embedded][] in a larger host application.
 
 It has no dependencies beyond the C standard library.
-You can use it as a static library, shared library, or simply compile the source into your app.
+You can use it as a static library, shared library, simply compile the source into your app, or use one of the existing bindings located on the [wiki](wiki).
 
 ### Building Wren
 
@@ -68,6 +68,7 @@ Include `build/wren.c` and `src/include/wren.h` in your project code and you're 
 ---
 
 [embedded]: embedding
+[wiki]: https://github.com/wren-lang/wren/wiki
 
 If you run into bugs, or have ideas or questions, any of
 the following work:
