@@ -42,6 +42,21 @@ File.open("words.txt") {|file|
 }
 </pre>
 
+### File.**openWithFlags**(path, flags, fn)
+
+Opens the file at `path` with the given flags and passes it to `fn`. After the function
+returns, the file is automatically closed.
+
+<pre class="snippet">
+File.openWithFlags("words.txt", FileFlags.readOnly) {|file|
+  file.readBytes(5)
+}
+</pre>
+
+### File.**size**(path)
+
+Returns the size of the contents of the file at `path` in bytes.
+
 ### File.**read**(path)
 
 Reads the entire contents of the file at `path` and returns it as a string.
@@ -86,6 +101,16 @@ file.close()
 Opens the file at `path` for reading. You are responsible for closing it when
 done with it.
 
+### File.**openWithFlags**(path, flags)
+
+Opens the file at `path` with the given flags. You are responsible for closing
+it when done with it.
+
+<pre class="snippet">
+var file = File.openWithFlags("words.txt", FileFlags.readOnly)
+file.readBytes(5)
+</pre>
+
 ## Methods
 
 ### **descriptor**
@@ -99,6 +124,10 @@ Whether the file is still open or has been closed.
 ### **size**
 
 The size of the contents of the file in bytes.
+
+### **stat*
+
+Returns a [stat](stat.html) for the file.
 
 ### **close**()
 
