@@ -52,6 +52,16 @@ class Sequence {
     }
   }
 
+  find(predicate) { find(iterate(null), predicate) }
+
+  find(it, predicate) {
+    while(it) {
+      if (predicate.call(iteratorValue(it))) break
+      it = iterate(it)
+    }
+    return it
+  }
+
   isEmpty { iterate(null) ? false : true }
 
   map(transformation) { MapSequence.new(this, transformation) }

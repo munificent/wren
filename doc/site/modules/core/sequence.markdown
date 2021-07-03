@@ -66,6 +66,13 @@ Iterates over the sequence, passing each element to the given `function`.
 ["one", "two", "three"].each {|word| System.print(word) }
 </pre>
 
+### **find**(predicate), **find**(it, predicate)
+
+Returns an iterator on the sequence that pass the function `predicate`,
+starting from the begining of the sequence or `it` if provided.
+
+It is a runtime error if `it` is not a valid iterator value on the sequence.
+
 ### **isEmpty**
 
 Returns whether the sequence contains any elements.
