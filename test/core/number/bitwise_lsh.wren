@@ -6,7 +6,8 @@ System.print(0xaaaaaaaa << 1) // expect: 1431655764
 System.print(0xf0f0f0f0 << 1) // expect: 3789677024
 
 // Max u32 value.
-System.print(0xffffffff << 0) // expect: 4294967295
+System.print(0xffffffff << 1) // expect: 4294967294
+System.print(0xffffffff << 32) // expect: 0
 
 // TODO: Negative numbers.
 // TODO: Floating-point numbers.

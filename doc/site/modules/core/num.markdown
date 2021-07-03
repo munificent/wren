@@ -234,6 +234,15 @@ It is a runtime error if `denominator` is not a number.
 Compares this and `other`, returning `true` or `false` based on how the numbers
 are ordered. It is a runtime error if `other` is not a number.
 
+### **&lt;&lt;**(rhs), **&gt;&gt;**(rhs), **bitwiseShift**(rhs) operators
+
+Performs *bitwise* logical shift on the number. The number is first converted
+to a 32-bit unsigned value, which will truncate any floating point value. The
+bits of the result of that are then shifted, yielding the result.
+
+It is a runtime error if `other` is not a positive integer, unless using
+`bitwiseShift(rhs)` which accept any integer allowing left/right shifting.
+
 ### **~** operator
 
 Performs *bitwise* negation on the number. The number is first converted to a

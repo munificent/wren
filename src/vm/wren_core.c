@@ -669,17 +669,37 @@ DEF_NUM_INFIX(gte,      >=, BOOL)
 #define DEF_NUM_BITWISE(name, op)                                              \
     DEF_PRIMITIVE(num_bitwise##name)                                           \
     {                                                                          \
-      if (!validateNum(vm, args[1], "Right operand")) return false;            \
+      if (!validateInt(vm, args[0], "Left operand") ||                         \
+          !validateInt(vm, args[1], "Right operand")) return false;            \
       uint32_t left = (uint32_t)AS_NUM(args[0]);                               \
       uint32_t right = (uint32_t)AS_NUM(args[1]);                              \
       RETURN_NUM(left op right);                                               \
     }
 
+#define DEF_NUM_BITWISE_FN(name, fn)                                           \
+    DEF_PRIMITIVE(num_bitwise##name)                                           \
+    {                                                                          \
+      if (!validateInt(vm, args[0], "Left operand") ||                         \
+          !validateInt(vm, args[1], "Right operand")) return false;            \
+      uint32_t left = (uint32_t)AS_NUM(args[0]);                               \
+      uint32_t right = (uint32_t)AS_NUM(args[1]);                              \
+      RETURN_NUM(fn(left, right));                                             \
+    }
+
 DEF_NUM_BITWISE(And,        &)
 DEF_NUM_BITWISE(Or,         |)
 DEF_NUM_BITWISE(Xor,        ^)
-DEF_NUM_BITWISE(LeftShift,  <<)
-DEF_NUM_BITWISE(RightShift, >>)
+DEF_NUM_BITWISE_FN(LeftShift,  wrenBitwiseLeftShift_u32)
+DEF_NUM_BITWISE_FN(RightShift, wrenBitwiseRightShift_u32)
+
+DEF_PRIMITIVE(num_bitwiseShift)
+{
+  if (!validateInt(vm, args[0], "Left operand") ||
+      !validateInt(vm, args[1], "Right operand")) return false;
+  uint32_t left = (uint32_t)AS_NUM(args[0]);
+  int32_t right = (int32_t)AS_NUM(args[1]);
+  RETURN_NUM(wrenBitwiseShift_u32(left, right));
+}
 
 // Defines a primitive method on Num that returns the result of [fn].
 #define DEF_NUM_FN(name, fn)                                                   \
@@ -1371,6 +1391,7 @@ void wrenInitializeCore(WrenVM* vm)
   PRIMITIVE(vm->numClass, "^(_)", num_bitwiseXor);
   PRIMITIVE(vm->numClass, "<<(_)", num_bitwiseLeftShift);
   PRIMITIVE(vm->numClass, ">>(_)", num_bitwiseRightShift);
+  PRIMITIVE(vm->numClass, "bitwiseShift(_)", num_bitwiseShift);
   PRIMITIVE(vm->numClass, "abs", num_abs);
   PRIMITIVE(vm->numClass, "acos", num_acos);
   PRIMITIVE(vm->numClass, "asin", num_asin);

@@ -3,6 +3,7 @@
 
 #include <math.h>
 #include <stdint.h>
+#include <sys/types.h>
 
 // A union to let us reinterpret a double as raw bits and back.
 typedef union
@@ -29,6 +30,21 @@ static inline uint64_t wrenDoubleToBits(double num)
   WrenDoubleBits data;
   data.num = num;
   return data.bits64;
+}
+
+static inline uint32_t wrenBitwiseLeftShift_u32(uint32_t lhs, size_t rhs)
+{
+  return rhs < 32 ? lhs << rhs : 0;
+}
+
+static inline uint32_t wrenBitwiseRightShift_u32(uint32_t lhs, size_t rhs)
+{
+  return rhs < 32 ? lhs >> rhs : 0;
+}
+
+static inline uint32_t wrenBitwiseShift_u32(uint32_t lhs, ssize_t rhs)
+{
+  return rhs < 0 ? wrenBitwiseLeftShift_u32(lhs, -rhs) : wrenBitwiseRightShift_u32(lhs, rhs);
 }
 
 #endif
