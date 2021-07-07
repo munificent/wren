@@ -584,18 +584,23 @@ static void bindForeignClass(WrenVM* vm, ObjClass* classObj, ObjModule* module)
     }
 #endif
   }
+
+  if (methods.allocate == NULL)
+  {
+    ASSERT(methods.finalize == NULL, "Classes cannot have finalizer without allocator.");
+
+    vm->fiber->error = wrenStringFormat(vm,
+        "Could not find foreign class $ in module '$'.",
+        classObj->name->value, module->name->value);
+    return;
+  }
   
   Method method;
   method.type = METHOD_FOREIGN;
 
-  // Add the symbol even if there is no allocator so we can ensure that the
-  // symbol itself is always in the symbol table.
   int symbol = wrenSymbolTableEnsure(vm, &vm->methodNames, "<allocate>", 10);
-  if (methods.allocate != NULL)
-  {
-    method.as.foreign = methods.allocate;
-    wrenBindMethod(vm, classObj, symbol, method);
-  }
+  method.as.foreign = methods.allocate;
+  wrenBindMethod(vm, classObj, symbol, method);
   
   // Add the symbol even if there is no finalizer so we can ensure that the
   // symbol itself is always in the symbol table.
