@@ -869,7 +869,7 @@ static int readHexEscape(Parser* parser, int digits, const char* description)
       break;
     }
 
-    value = (value * 16) | digit;
+    value = (value << 4) | digit;
   }
 
   return value;
