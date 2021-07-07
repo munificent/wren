@@ -297,10 +297,31 @@ DEF_PRIMITIVE(fn_toString)
   RETURN_VAL(CONST_STRING(vm, "<fn>"));
 }
 
+static double calculateRangeCount(ObjRange* range)
+{
+  // Credit: Ruby MRI (https://github.com/ruby/ruby/blob/b2030d4dae3142e3fe6ad79ac1202de5a9f34a5a/numeric.c#L2536-L2563)
+
+  double n = fabs(range->to - range->from);
+  double err = (fabs(range->from) + fabs(range->to) + n) * DBL_EPSILON;
+  if (err > 0.5) err = 0.5;
+  if (range->isInclusive)
+  {
+    if (n < 0) return 0;
+    n = floor(n + err);
+  }
+  else
+  {
+    if (n <= 0) return 0;
+    n = n < 1 ? 0 : floor(n - err);
+  }
+  
+  return n + 1;
+}
+
 // Creates a new list of size args[1], with all elements initialized to args[2].
 DEF_PRIMITIVE(list_filled)
 {
-  if (!validateInt(vm, args[1], "Size")) return false;  
+  if (!validateInt(vm, args[1], "Size")) return false;
   if (AS_NUM(args[1]) < 0) RETURN_ERROR("Size cannot be negative.");
   
   uint32_t size = (uint32_t)AS_NUM(args[1]);
@@ -312,6 +333,15 @@ DEF_PRIMITIVE(list_filled)
   }
   
   RETURN_OBJ(list);
+}
+
+DEF_PRIMITIVE(list_toList)
+{
+  ObjList* list = AS_LIST(args[0]);
+  ObjList* result = wrenNewList(vm, list->elements.count);
+  memcpy(result->elements.data, list->elements.data,
+         list->elements.count * sizeof(Value));
+  RETURN_OBJ(result);
 }
 
 DEF_PRIMITIVE(list_new)
@@ -979,6 +1009,166 @@ DEF_PRIMITIVE(range_toString)
   RETURN_VAL(result);
 }
 
+DEF_PRIMITIVE(range_count)
+{
+  RETURN_NUM(calculateRangeCount(AS_RANGE(args[0])));
+}
+
+DEF_PRIMITIVE(range_contains)
+{
+  if (!IS_NUM(args[1])) RETURN_FALSE;
+
+  ObjRange* range = AS_RANGE(args[0]);
+  double element = AS_NUM(args[1]);
+
+  double differenceFromFrom = element - range->from;
+  bool isDerivedFromFrom = floor(differenceFromFrom) == differenceFromFrom;
+  bool isInsideRange;
+  if (range->from < range->to)
+  {
+    if (range->isInclusive)
+    {
+      isInsideRange = range->from <= element && element <= range->to;
+    }
+    else
+    {
+      isInsideRange = range->from <= element && element < range->to;
+    }
+  }
+  else
+  {
+    if (range->isInclusive)
+    {
+      isInsideRange = range->to <= element && element <= range->from;
+    }
+    else
+    {
+      isInsideRange = range->to < element && element <= range->from;
+    }
+  }
+  RETURN_BOOL(isDerivedFromFrom && isInsideRange);
+}
+
+DEF_PRIMITIVE(range_skip)
+{
+  if (!validateInt(vm, args[1], "Count")) return false;
+  double count = AS_NUM(args[1]);
+  if (count < 0) RETURN_ERROR("Count must be a non-negative integer.");
+
+  ObjRange* range = AS_RANGE(args[0]);
+  if (range->from < range->to)
+  {
+    double newFrom = range->from + count;
+    if (newFrom > range->to)
+    {
+      // Return an empty range
+      RETURN_VAL(wrenNewRange(vm, range->to, range->to, false));
+    }
+    else
+    {
+      RETURN_VAL(wrenNewRange(vm, newFrom, range->to, range->isInclusive));
+    }
+  }
+  else
+  {
+    double newFrom = range->from - count;
+    if (newFrom < range->to)
+    {
+      // Return an empty range
+      RETURN_VAL(wrenNewRange(vm, range->to, range->to, false));
+    }
+    else
+    {
+      RETURN_VAL(wrenNewRange(vm, newFrom, range->to, range->isInclusive));
+    }
+  }
+}
+
+DEF_PRIMITIVE(range_take)
+{
+  if (!validateInt(vm, args[1], "Count")) return false;
+  double count = AS_NUM(args[1]);
+  if (count < 0) RETURN_ERROR("Count must be a non-negative integer.");
+
+  ObjRange* range = AS_RANGE(args[0]);
+  if (range->from < range->to)
+  {
+    double newTo = range->from + count;
+    if (newTo >= range->to)
+    {
+      RETURN_VAL(args[0]);
+    }
+    else
+    {
+      RETURN_VAL(wrenNewRange(vm, range->from, newTo, false));
+    }
+  }
+  else
+  {
+    double newTo = range->from - count;
+    if (newTo <= range->to)
+    {
+      RETURN_VAL(args[0]);
+    }
+    else
+    {
+      RETURN_VAL(wrenNewRange(vm, range->from, newTo, false));
+    }
+  }
+}
+
+DEF_PRIMITIVE(range_toList)
+{
+  ObjRange* range = AS_RANGE(args[0]);
+  uint32_t count = (uint32_t)calculateRangeCount(range);
+  ObjList* result = wrenNewList(vm, count);
+
+  if (range->from < range->to)
+  {
+    if (range->isInclusive)
+    {
+      uint32_t i = 0;
+      for (double value = range->from; value <= range->to; value++)
+      {
+          result->elements.data[i] = NUM_VAL(value);
+          i++;
+      }
+    }
+    else
+    {
+      uint32_t i = 0;
+      for (double value = range->from; value < range->to; value++)
+      {
+          result->elements.data[i] = NUM_VAL(value);
+          i++;
+      }
+    }
+  }
+  else
+  {
+    if (range->isInclusive)
+    {
+      uint32_t i = 0;
+      for (double value = range->from; value >= range->to; value--)
+      {
+          result->elements.data[i] = NUM_VAL(value);
+          i++;
+      }
+    }
+    else
+    {
+      uint32_t i = 0;
+      for (double value = range->from; value > range->to; value--)
+      {
+          result->elements.data[i] = NUM_VAL(value);
+          i++;
+      }
+    }
+  }
+
+  RETURN_OBJ(result);
+}
+
 DEF_PRIMITIVE(string_fromCodePoint)
 {
   if (!validateInt(vm, args[1], "Code point")) return false;
@@ -1443,6 +1633,7 @@ void wrenInitializeCore(WrenVM* vm)
   PRIMITIVE(vm->listClass, "remove(_)", list_removeValue);
   PRIMITIVE(vm->listClass, "indexOf(_)", list_indexOf);
   PRIMITIVE(vm->listClass, "swap(_,_)", list_swap);
+  PRIMITIVE(vm->listClass, "toList", list_toList);
 
   vm->mapClass = AS_CLASS(wrenFindVariable(vm, coreModule, "Map"));
   PRIMITIVE(vm->mapClass->obj.classObj, "new()", map_new);
@@ -1466,6 +1657,11 @@ void wrenInitializeCore(WrenVM* vm)
   PRIMITIVE(vm->rangeClass, "iterate(_)", range_iterate);
   PRIMITIVE(vm->rangeClass, "iteratorValue(_)", range_iteratorValue);
   PRIMITIVE(vm->rangeClass, "toString", range_toString);
+  PRIMITIVE(vm->rangeClass, "count", range_count);
+  PRIMITIVE(vm->rangeClass, "contains(_)", range_contains);
+  PRIMITIVE(vm->rangeClass, "skip(_)", range_skip);
+  PRIMITIVE(vm->rangeClass, "take(_)", range_take);
+  PRIMITIVE(vm->rangeClass, "toList", range_toList);
 
   ObjClass* systemClass = AS_CLASS(wrenFindVariable(vm, coreModule, "System"));
   PRIMITIVE(systemClass->obj.classObj, "clock", system_clock);
