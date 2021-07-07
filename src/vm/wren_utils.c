@@ -64,7 +64,7 @@ void wrenBlackenSymbolTable(WrenVM* vm, SymbolTable* symbolTable)
   vm->bytesAllocated += symbolTable->capacity * sizeof(*symbolTable->data);
 }
 
-int wrenUtf8EncodeNumBytes(int value)
+int wrenUtf8EncodeNumBytes(uint32_t value)
 {
   ASSERT(value >= 0, "Cannot encode a negative value.");
   
@@ -75,7 +75,7 @@ int wrenUtf8EncodeNumBytes(int value)
   return 0;
 }
 
-int wrenUtf8Encode(int value, uint8_t* bytes)
+int wrenUtf8Encode(uint32_t value, uint8_t* bytes)
 {
   if (value <= 0x7f)
   {

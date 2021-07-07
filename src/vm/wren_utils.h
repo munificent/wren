@@ -95,13 +95,13 @@ void wrenBlackenSymbolTable(WrenVM* vm, SymbolTable* symbolTable);
 // Returns the number of bytes needed to encode [value] in UTF-8.
 //
 // Returns 0 if [value] is too large to encode.
-int wrenUtf8EncodeNumBytes(int value);
+int wrenUtf8EncodeNumBytes(uint32_t value);
 
 // Encodes value as a series of bytes in [bytes], which is assumed to be large
 // enough to hold the encoded result.
 //
 // Returns the number of written bytes.
-int wrenUtf8Encode(int value, uint8_t* bytes);
+int wrenUtf8Encode(uint32_t value, uint8_t* bytes);
 
 // Decodes the UTF-8 sequence starting at [bytes] (which has max [length]),
 // returning the code point.
